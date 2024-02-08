@@ -55,7 +55,8 @@ class _PoseSetupViewState extends State<PoseSetupView> {
   ExercisePhase phase = ExercisePhase.NA;
   int repCounter = 0; // TODO make rep counter own widget inside camera, then just pass the num value over
 
-  List<Widget?> _overlay = [Container(), Container(), Container()];
+  // [top arms] [bottom arms] [rep counter] [text feedback]
+  List<Widget?> _overlay = [Container(), Container(), Container(), Container()];
 
   bool showFormCorrection = false;
   // bool painterShowCorrection = false;
@@ -168,6 +169,7 @@ class _PoseSetupViewState extends State<PoseSetupView> {
             triggerFormCorrection(
                 "FEEDBACK - didn't go low enough (" + minArmAngle.toString() + ")",
                 FormMistake.BOTTOM_ARMS);
+            _overlay[3] = _textFeedback("Try and go lower next rep");
           }
 
           phase = ExercisePhase.TOP;
@@ -251,8 +253,9 @@ class _PoseSetupViewState extends State<PoseSetupView> {
       }
 
       // trigger timer
-      Future.delayed(const Duration(seconds: 2), () {
+      Future.delayed(const Duration(seconds: 3), () {
         showFormCorrection = false;
+        _overlay[3] = Container();
       });
     }
   }
@@ -276,6 +279,30 @@ class _PoseSetupViewState extends State<PoseSetupView> {
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 11,
+                ),
+              ),
+            )));
+  }
+
+  Widget _textFeedback(String _feedback) {
+    return Positioned(
+        top: 40,
+        right: 68,
+        child: Container(
+            width: 150,
+            height: 50,
+            decoration: BoxDecoration(
+                color: Colors.grey[800],
+                border: Border.all(color: Colors.grey[800]!),
+                borderRadius: BorderRadius.all(Radius.circular(15))),
+            child: Center(
+              child: Text( // TODO - possibly add padding
+                _feedback,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
                 ),
               ),
             )));
