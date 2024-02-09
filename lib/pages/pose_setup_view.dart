@@ -1,12 +1,12 @@
 import 'dart:math';
 
 import 'package:calisthenics_app/pages/camera_view.dart';
-import 'package:calisthenics_app/pages/painters/original_pose_painter.dart';
 import 'package:calisthenics_app/pages/painters/pose_painter.dart';
 import 'package:calisthenics_app/pages/utils/form_correction_generator.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 
 // TODO - implement this as the 'press up' class & refactor
@@ -125,7 +125,6 @@ class _PoseSetupViewState extends State<PoseSetupView> {
         // once time is up custom paint to removed & form-correction-visuals flag is allowed again
 
       for (Pose pose in poses) {
-        // print(phase);
 
         double rightArmAngle = findAngle(
             pose.landmarks[PoseLandmarkType.rightWrist]!,
@@ -148,7 +147,7 @@ class _PoseSetupViewState extends State<PoseSetupView> {
         }
 
         // when going up update the maximum arm angle reached
-        if (phase == ExercisePhase.BOTTOM) {
+        if (phase == ExercisePhase.UP) {
           if (avgArmAngle > maxArmAngle) {
             maxArmAngle = avgArmAngle;
             topPosition = pose;
@@ -167,9 +166,8 @@ class _PoseSetupViewState extends State<PoseSetupView> {
             // if we were in DOWN position, never reached BOTTOM (i.e. didn't go low enough)
             // provide this feedback to user (with angles maybe)
             triggerFormCorrection(
-                "FEEDBACK - didn't go low enough (" + minArmAngle.toString() + ")",
+                "FEEDBACK - did not go low enough (" + maxArmAngle.toString() + ")",
                 FormMistake.BOTTOM_ARMS);
-            _overlay[3] = _textFeedback("Try and go lower next rep");
           }
 
           phase = ExercisePhase.TOP;
@@ -204,7 +202,6 @@ class _PoseSetupViewState extends State<PoseSetupView> {
           }
         }
 
-        // print(rightArmAngle.toString() + " | " + leftArmAngle.toString());
       }
 
       _customPaint = CustomPaint(
@@ -232,8 +229,8 @@ class _PoseSetupViewState extends State<PoseSetupView> {
     return degrees;
   }
 
-  void triggerFormCorrection(String feedbackText, FormMistake formMistake) {
-    print(feedbackText);
+  void triggerFormCorrection(String debugText, FormMistake formMistake) {
+    print(debugText);
 
     // if not already showing a form correction
     if (!showFormCorrection) {
@@ -241,9 +238,13 @@ class _PoseSetupViewState extends State<PoseSetupView> {
 
       switch (formMistake) {
         case FormMistake.BOTTOM_ARMS:
-          savedPose = generateLowerArmsCorrection(bottomPosition);
+          _overlay[3] = _textFeedback("Try and go lower next rep");
+          savedPose = generateFormCorrection(bottomPosition, formMistake);
+          AudioPlayer().play(AssetSource('audio/lowerArmsFormCorrection.mp3'));
         case FormMistake.TOP_ARMS:
-          // TODO: Handle this case.
+          _overlay[3] = _textFeedback("Straighten arms at the top of each rep");
+          savedPose = generateFormCorrection(topPosition, formMistake);
+          AudioPlayer().play(AssetSource('audio/topArmsFormCorrection.mp3'));
         case FormMistake.HIGH_HIPS:
           // TODO: Handle this case.
         case FormMistake.LOW_HIPS:
@@ -253,7 +254,7 @@ class _PoseSetupViewState extends State<PoseSetupView> {
       }
 
       // trigger timer
-      Future.delayed(const Duration(seconds: 3), () {
+      Future.delayed(const Duration(seconds: 2), () {
         showFormCorrection = false;
         _overlay[3] = Container();
       });
@@ -311,8 +312,8 @@ class _PoseSetupViewState extends State<PoseSetupView> {
 
 class PushUpAngles {
   final double startArmAngleMax = 181.0;
-  final double startArmAngleMin = 155.0;
-  final double endArmAngleMax = 30;//95.0;
+  final double startArmAngleMin = 180;//155.0;
+  final double endArmAngleMax = 95.0;//30;//
   final double endArmAngleMin = 10;//10.0;
 
   PushUpAngles();
@@ -333,5 +334,3 @@ class PushUpAngles {
 
   // TODO - possibly check occlusion/likelihood (if < threshold, don't track that arm)
 }
-
-// Icon(Icons.straighten, color: Colors.white,),
