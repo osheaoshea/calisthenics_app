@@ -1,8 +1,8 @@
+import 'package:calisthenics_app/utils/coordinates_translator.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
 
-import '../utils/coordinates_translator.dart';
 
 class PosePainterOriginal extends CustomPainter {
 
