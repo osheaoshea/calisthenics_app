@@ -1,8 +1,9 @@
 import 'dart:math';
 
-import 'package:calisthenics_app/pages/pose_setup_view.dart';
 import 'package:calisthenics_app/pages/utils/form_correction_poses.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
+
+import '../common/form_mistake.dart';
 
 
 Pose generateFormCorrection(Pose pose, FormMistake type) {

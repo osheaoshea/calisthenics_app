@@ -2,6 +2,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
 
+import '../common/form_mistake.dart';
 import '../utils/coordinates_translator.dart';
 
 
@@ -14,9 +15,11 @@ class PosePainter extends CustomPainter {
 
   final Pose savedPose;
   final bool showFormCorrection;
+  final FormMistake mistake;
 
   PosePainter(this.poses, this.imageSize, this.rotation,
-      this.cameraLensDirection, this.savedPose, this.showFormCorrection);
+      this.cameraLensDirection, this.savedPose, this.showFormCorrection,
+      this.mistake);
 
 
   @override
@@ -55,9 +58,19 @@ class PosePainter extends CustomPainter {
           whitePaint, whitePaint, whitePaint, whitePaint,
           whitePaint);
       if (showFormCorrection) {
-        paintPose(savedPose, canvas, size,
-            greenPaint, greenPaint, whitePaint, whitePaint,
-            whitePaint);
+        if (mistake == FormMistake.TOP_ARMS || mistake == FormMistake.BOTTOM_ARMS) {
+          paintPose(savedPose, canvas, size,
+              greenPaint, greenPaint, whitePaint, whitePaint,
+              whitePaint);
+        } else if (mistake == FormMistake.LOW_HIPS || mistake == FormMistake.HIGH_HIPS) {
+          paintPose(savedPose, canvas, size,
+              whitePaint, whitePaint, whitePaint, whitePaint,
+              greenPaint);
+        } else if (mistake == FormMistake.BENT_LEGS) {
+          paintPose(savedPose, canvas, size,
+              whitePaint, whitePaint, greenPaint, greenPaint,
+              whitePaint);
+        }
       }
     }
   }
