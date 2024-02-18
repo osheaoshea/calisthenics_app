@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:audioplayers/audioplayers.dart';
 
-// TODO - implement this as the 'press up' class & refactor
 
 enum ExercisePhase {
   NA,
@@ -19,8 +18,8 @@ enum ExercisePhase {
   UP
 }
 
-class PoseSetupView extends StatefulWidget {
-  const PoseSetupView({
+class WorkoutView extends StatefulWidget {
+  const WorkoutView({
     super.key,
     this.onCameraFeedReady,
     this.onCameraLensDirectionChanged,
@@ -30,10 +29,10 @@ class PoseSetupView extends StatefulWidget {
   final Function(CameraLensDirection direction)? onCameraLensDirectionChanged;
 
   @override
-  State<PoseSetupView> createState() => _PoseSetupViewState();
+  State<WorkoutView> createState() => _WorkoutViewState();
 }
 
-class _PoseSetupViewState extends State<PoseSetupView> {
+class _WorkoutViewState extends State<WorkoutView> {
 
   final PoseDetector _poseDetector =
       PoseDetector(options: PoseDetectorOptions());
@@ -45,14 +44,17 @@ class _PoseSetupViewState extends State<PoseSetupView> {
   var _cameraLensDirection = CameraLensDirection.back;
 
   final PushUpAngles pushUpAngles = PushUpAngles();
+
   ExercisePhase phase = ExercisePhase.NA;
   ExercisePhase prevPhase = ExercisePhase.NA;
-  int repCounter = 0; // TODO make rep counter own widget inside camera, then just pass the num value over
   int phaseCounter = 0; // track how long we have been in a given phase
 
-  // [top arms] [bottom arms] [rep counter] [text feedback] [angle debug] [angle debug]
-  List<Widget?> _overlay = [Container(), Container(), Container(), Container(),
-    Container(), Container()];
+  int repCounter = 0; // TODO make rep counter own widget inside camera, then just pass the num value over
+  int repGoal = 5;
+  bool workoutComplete = false;
+
+  // [text feedback] [rep counter] [timer] [end workout]
+  List<Widget?> _overlay = [Container(), Container(), Container(), Container()];
 
   // form correction variables
   bool showFormCorrection = false;
@@ -69,7 +71,7 @@ class _PoseSetupViewState extends State<PoseSetupView> {
 
   @override
   void initState() {
-    _overlay[2] = _generalOverlay(Colors.grey[800]!, repCounter.toString(), 40, 68+120);
+    _overlay[1] = _repCounter(repCounter.toString());
     super.initState();
   }
 
@@ -86,7 +88,7 @@ class _PoseSetupViewState extends State<PoseSetupView> {
       customPaint: _customPaint,
       overlay: _overlay,
       onImage: _processImage,
-      workoutComplete: false,
+      workoutComplete: workoutComplete,
       onCameraFeedReady: widget.onCameraFeedReady,
       initialCameraLensDirection: _cameraLensDirection,
       onCameraLensDirectionChanged: (value) => _cameraLensDirection = value,
@@ -99,6 +101,9 @@ class _PoseSetupViewState extends State<PoseSetupView> {
     _isBusy = true;
 
     setState(() {});
+
+    workoutComplete = repCounter >= repGoal;
+
 
     final poses = await _poseDetector.processImage(inputImage);
 
@@ -136,7 +141,7 @@ class _PoseSetupViewState extends State<PoseSetupView> {
         // -- DEBUG --
         // print(rightHipAngle.toString() + " | " + leftHipAngle.toString());
         // print(avgHipAngle);
-        _overlay[4] = _generalOverlay(Colors.deepPurple, avgHipAngle.toStringAsFixed(1), 40, 68+180);
+        // _overlay[4] = _generalOverlay(Colors.deepPurple, avgHipAngle.toStringAsFixed(1), 40, 68+180);
 
         // checking if hips are too high or too low
         if (!pushUpAngles.checkHipAngles(rightHipAngle, leftHipAngle)) {
@@ -193,12 +198,12 @@ class _PoseSetupViewState extends State<PoseSetupView> {
 
         // if in TOP position
         if (pushUpAngles.checkStartArmAngles(rightArmAngle, leftArmAngle)) {
-          _overlay[0] = _generalOverlay(Colors.green, "Start Arms", 40, 68);
+          // _overlay[0] = _generalOverlay(Colors.green, "Start Arms", 40, 68);
 
           if(phase == ExercisePhase.UP){
             // if we were in UP position, increment rep counter (i.e. one rep has been completed)
             repCounter++;
-            _overlay[2] = _generalOverlay(Colors.grey[800]!, repCounter.toString(), 40, 68+120);
+            _overlay[1] = _repCounter(repCounter.toString());
           } else if (phase == ExercisePhase.DOWN && phaseCounter > 2) {
             // if we were in DOWN position, never reached BOTTOM (i.e. didn't go low enough)
             // provide this feedback to user (with angles maybe)
@@ -210,7 +215,7 @@ class _PoseSetupViewState extends State<PoseSetupView> {
           phase = ExercisePhase.TOP;
           minArmAngle = 181.0;
         } else {
-          _overlay[0] = _generalOverlay(Colors.red, "Start Arms", 40, 68);
+          // _overlay[0] = _generalOverlay(Colors.red, "Start Arms", 40, 68);
           // if we were in the top position but now aren't then we are going DOWN
           if (phase == ExercisePhase.TOP) {
             phase = ExercisePhase.DOWN;
@@ -219,7 +224,7 @@ class _PoseSetupViewState extends State<PoseSetupView> {
 
         // if in BOTTOM position
         if (pushUpAngles.checkEndArmAngles(rightArmAngle, leftArmAngle)) {
-          _overlay[1] = _generalOverlay(Colors.green, "End Arms", 40, 68+60);
+          // _overlay[1] = _generalOverlay(Colors.green, "End Arms", 40, 68+60);
 
           // if we were going UP and then got to BOTTOM again - we did not go high enough
           // TODO - bug - form correction triggered at bottom of rep before even reached top
@@ -237,7 +242,7 @@ class _PoseSetupViewState extends State<PoseSetupView> {
           phase = ExercisePhase.BOTTOM;
           maxArmAngle = -1.0;
         } else {
-          _overlay[1] = _generalOverlay(Colors.red, "End Arms", 40, 68+60);
+          // _overlay[1] = _generalOverlay(Colors.red, "End Arms", 40, 68+60);
           // if we were in the bottom position but now aren't - then we are going UP
           if (phase == ExercisePhase.BOTTOM) {
             phase = ExercisePhase.UP;
@@ -290,9 +295,6 @@ class _PoseSetupViewState extends State<PoseSetupView> {
       // check the gradient of first - mid
       // check gradient of mid - last
       // if A is
-
-      // TODO - note - might be able to do something with angles instead of calculating gradients
-      /// check angles form the form correction painting
     }
 
      */
@@ -310,11 +312,11 @@ class _PoseSetupViewState extends State<PoseSetupView> {
 
       switch (formMistake) {
         case FormMistake.BOTTOM_ARMS:
-          _overlay[3] = _textFeedback("Try and go lower next rep");
+          _overlay[0] = _textFeedback("Try and go lower next rep");
           savedPose = generateFormCorrection(bottomPosition, formMistake);
           AudioPlayer().play(AssetSource('audio/lowerArmsFormCorrection.mp3'));
         case FormMistake.TOP_ARMS:
-          _overlay[3] = _textFeedback("Straighten arms at the top of each rep");
+          _overlay[0] = _textFeedback("Straighten arms at the top of each rep");
           savedPose = generateFormCorrection(topPosition, formMistake);
           AudioPlayer().play(AssetSource('audio/topArmsFormCorrection.mp3'));
         case FormMistake.HIGH_HIPS:
@@ -323,7 +325,7 @@ class _PoseSetupViewState extends State<PoseSetupView> {
           // savedPose = generateFormCorrection(hipPosition, formMistake);
           // AudioPlayer().play(AssetSource('audio/highHipsFormCorrection.mp3'));
         case FormMistake.LOW_HIPS:
-          _overlay[3] = _textFeedback("Straighten out your hips"); // old - Try bring your hips upwards
+          _overlay[0] = _textFeedback("Straighten out your hips"); // old - Try bring your hips upwards
           savedPose = generateFormCorrection(hipPosition, formMistake);
           // need new audio for hips
           // AudioPlayer().play(AssetSource('audio/lowHipsFormCorrection.mp3'));
@@ -332,9 +334,9 @@ class _PoseSetupViewState extends State<PoseSetupView> {
       }
 
       // trigger timer
-      Future.delayed(const Duration(seconds: 2), () {
+      Future.delayed(const Duration(seconds: 3), () {
         showFormCorrection = false;
-        _overlay[3] = Container();
+        _overlay[0] = Container();
       });
     }
   }
@@ -363,10 +365,51 @@ class _PoseSetupViewState extends State<PoseSetupView> {
             )));
   }
 
+  Widget _repCounter(String _rep) {
+    return Positioned(
+        top: 40,
+        right: 8,
+        child: Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+                color: Colors.grey[800]!,
+                border: Border.all(color: Colors.grey[800]!),
+                borderRadius: BorderRadius.all(Radius.circular(15))),
+            child: Center(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    _rep,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 32,
+                        letterSpacing: 1
+                    ),
+                  ),
+                  Text(
+                    "/$repGoal",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.grey[200],
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      letterSpacing: 1
+                    ),
+                  ),
+                ],
+              ),
+            )));
+  }
+
   Widget _textFeedback(String _feedback) {
     return Positioned(
         top: 40,
-        right: 68,
+        left: 68,
         child: Container(
             width: 150,
             height: 50,

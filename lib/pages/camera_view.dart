@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
@@ -8,12 +9,13 @@ import 'package:google_ml_kit/google_ml_kit.dart';
 class CameraView extends StatefulWidget {
   CameraView(
       {Key? key,
-        required this.customPaint,
-        required this.overlay,
-        required this.onImage,
-        this.onCameraFeedReady,
-        this.onCameraLensDirectionChanged,
-        this.initialCameraLensDirection = CameraLensDirection.back})
+      required this.customPaint,
+      required this.overlay,
+      required this.onImage,
+      this.onCameraFeedReady,
+      this.onCameraLensDirectionChanged,
+      this.initialCameraLensDirection = CameraLensDirection.back,
+      required this.workoutComplete})
       : super(key: key);
 
   final CustomPaint? customPaint;
@@ -22,6 +24,7 @@ class CameraView extends StatefulWidget {
   final VoidCallback? onCameraFeedReady;
   final Function(CameraLensDirection direction)? onCameraLensDirectionChanged;
   final CameraLensDirection initialCameraLensDirection;
+  final bool workoutComplete;
 
   @override
   State<CameraView> createState() => _CameraViewState();
@@ -34,11 +37,20 @@ class _CameraViewState extends State<CameraView> {
   int _cameraIndex = -1;
   bool _changingCameraLens = false;
 
+  Stopwatch stopwatch = Stopwatch();
+
+  bool oneTimeRedirectFlag = false;
+
   @override
   void initState() {
     super.initState();
-
     _initialize();
+    stopwatch.start();
+
+    // end workout after given time
+    Timer(Duration(minutes: 10), (){
+      Navigator.of(context).pushReplacementNamed('/workout-complete');
+    });
   }
 
   void _initialize() async {
@@ -60,12 +72,26 @@ class _CameraViewState extends State<CameraView> {
 
   @override
   void dispose() {
+    stopwatch.stop();
     _stopLiveFeed();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+
+    // check if workout is complete, if so redirect
+    if(widget.workoutComplete && !oneTimeRedirectFlag){
+      oneTimeRedirectFlag = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacementNamed(
+          context,
+          '/workout-complete',
+          // add arguments - https://docs.flutter.dev/cookbook/navigation/navigate-with-arguments#:~:text=You%20can%20accomplish%20this%20task,the%20MaterialApp%20or%20CupertinoApp%20constructor.
+        );
+      });
+    }
+
     return Scaffold(
       body: _liveFeedBody(),
     );
@@ -83,58 +109,106 @@ class _CameraViewState extends State<CameraView> {
           Center(
             child: _changingCameraLens
                 ? Center(
-              child: const Text('Changing camera lens'),
-            )
+                    child: const Text('Changing camera lens'),
+                  )
                 : CameraPreview(
-              _controller!,
-              child: widget.customPaint,
-            ),
+                    _controller!,
+                    child: widget.customPaint,
+                  ),
           ),
           _backButton(),
           _switchLiveCameraToggle(),
-          for(Widget? w in widget.overlay) w ?? Container()
+          _stopWatch(),
+          for (Widget? w in widget.overlay) w ?? Container()
         ],
       ),
     );
   }
 
+  Widget _stopWatch() {
+    return Positioned(
+        bottom: 10,
+        left: 10,
+        child: SizedBox(
+            height: 70.0,
+            width: 150.0,
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                  color: Colors.grey[800]!,
+                  border: Border.all(color: Colors.grey[800]!),
+                  borderRadius: BorderRadius.all(Radius.circular(15))),
+              child: Center(
+                child: Text(
+                  _getStopWatchTime(),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 25,
+                  ),
+                ),
+              ),
+            )));
+  }
+
   Widget _backButton() => Positioned(
-    top: 40,
-    left: 8,
-    child: SizedBox(
-      height: 50.0,
-      width: 50.0,
-      child: FloatingActionButton(
-        heroTag: Object(),
-        onPressed: () => Navigator.of(context).pop(),
-        backgroundColor: Colors.black54,
-        child: Icon(
-          Icons.arrow_back_ios_outlined,
-          size: 20,
+        top: 40,
+        left: 10,
+        child: SizedBox(
+          height: 50.0,
+          width: 50.0,
+          child: FloatingActionButton(
+            heroTag: Object(),
+            onPressed: () => Navigator.of(context).pop(),
+            backgroundColor: Colors.grey[800],
+            child: Icon(
+              Icons.arrow_back_ios_outlined,
+              size: 20,
+              color: Colors.white,
+            ),
+            shape: RoundedRectangleBorder(
+                // side: BorderSide(width: 3,color: Colors.brown),
+                borderRadius: BorderRadius.circular(15)),
+          ),
         ),
-      ),
-    ),
-  );
+      );
 
   Widget _switchLiveCameraToggle() => Positioned(
-    bottom: 8,
-    right: 8,
-    child: SizedBox(
-      height: 50.0,
-      width: 50.0,
-      child: FloatingActionButton(
-        heroTag: Object(),
-        onPressed: _switchLiveCamera,
-        backgroundColor: Colors.black54,
-        child: Icon(
-          Platform.isIOS
-              ? Icons.flip_camera_ios_outlined
-              : Icons.flip_camera_android_outlined,
-          size: 25,
+        bottom: 8,
+        right: 8,
+        child: SizedBox(
+          height: 50.0,
+          width: 50.0,
+          child: FloatingActionButton(
+            heroTag: Object(),
+            onPressed: _switchLiveCamera,
+            backgroundColor: Colors.black54,
+            child: Icon(
+              Platform.isIOS
+                  ? Icons.flip_camera_ios_outlined
+                  : Icons.flip_camera_android_outlined,
+              size: 25,
+            ),
+          ),
         ),
-      ),
-    ),
-  );
+      );
+
+  String _getStopWatchTime() {
+    if(stopwatch.isRunning){
+      var milli = stopwatch.elapsed.inMilliseconds;
+
+      String milliseconds = ((milli % 1000) ~/ 10).toString().padLeft(2, "0");
+      String seconds = ((milli ~/ 1000) % 60).toString().padLeft(2, "0");
+      String minutes = ((milli ~/ 1000) ~/ 60).toString().padLeft(2, "0");
+
+      return "$minutes:$seconds:$milliseconds";
+    } else {
+      return '';
+    }
+  }
+
 
   Future _startLiveFeed() async {
     final camera = _cameras[_cameraIndex];
@@ -209,12 +283,11 @@ class _CameraViewState extends State<CameraView> {
       rotation = InputImageRotationValue.fromRawValue(sensorOrientation);
     } else if (Platform.isAndroid) {
       var rotationCompensation =
-      _orientations[_controller!.value.deviceOrientation];
+          _orientations[_controller!.value.deviceOrientation];
       if (rotationCompensation == null) return null;
       if (camera.lensDirection == CameraLensDirection.front) {
         // front-facing
-        rotationCompensation =
-            (sensorOrientation + rotationCompensation) % 360;
+        rotationCompensation = (sensorOrientation + rotationCompensation) % 360;
       } else {
         // back-facing
         rotationCompensation =
@@ -252,4 +325,3 @@ class _CameraViewState extends State<CameraView> {
     );
   }
 }
-
