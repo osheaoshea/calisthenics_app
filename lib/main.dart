@@ -1,7 +1,7 @@
 import 'package:calisthenics_app/pages/exercise_select_view.dart';
 import 'package:calisthenics_app/pages/home.dart';
 import 'package:calisthenics_app/pages/pose_setup_view.dart';
-import 'package:calisthenics_app/pages/workout_complete.dart';
+import 'package:calisthenics_app/pages/workout_complete_view.dart';
 import 'package:calisthenics_app/pages/workout_view.dart';
 import 'package:flutter/material.dart';
 

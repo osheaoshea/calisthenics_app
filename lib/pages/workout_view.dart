@@ -4,19 +4,14 @@ import 'package:calisthenics_app/pages/camera_view.dart';
 import 'package:calisthenics_app/painters/pose_painter.dart';
 import 'package:calisthenics_app/utils/form_correction_generator.dart';
 import 'package:calisthenics_app/common/form_mistake.dart';
+import 'package:calisthenics_app/common/exercise_phase.dart';
+import 'package:calisthenics_app/exercises/pushup_angles.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 
-enum ExercisePhase {
-  NA,
-  TOP,
-  DOWN,
-  BOTTOM,
-  UP
-}
 
 class WorkoutView extends StatefulWidget {
   const WorkoutView({
@@ -47,7 +42,12 @@ class _WorkoutViewState extends State<WorkoutView> {
 
   ExercisePhase phase = ExercisePhase.NA;
   ExercisePhase prevPhase = ExercisePhase.NA;
+
+  // used to delay form corrections
   int phaseCounter = 0; // track how long we have been in a given phase
+  int phaseLimit = 3;
+  int hipErrorCounter = 0;
+  int hipErrorLimit = 6;
 
   int repCounter = 0; // TODO make rep counter own widget inside camera, then just pass the num value over
   int repGoal = 5;
@@ -63,15 +63,14 @@ class _WorkoutViewState extends State<WorkoutView> {
 
   Pose bottomPosition = Pose(landmarks: {});
   Pose topPosition = Pose(landmarks: {});
-
   Pose hipPosition = Pose(landmarks: {});
-  int hipErrorCounter = 0;
 
   // form angle variables
   double maxArmAngle = -1.0;
   double minArmAngle = 181.0;
 
   // plank variables
+  // TODO more thoroughly test plank checker
   bool inPlank = false;
   int inPlankCounter = -5;
 
@@ -109,8 +108,8 @@ class _WorkoutViewState extends State<WorkoutView> {
 
     setState(() {});
 
+    // finish workout when rep goal is met
     workoutComplete = repCounter >= repGoal;
-
 
     final poses = await _poseDetector.processImage(inputImage);
 
@@ -122,20 +121,11 @@ class _WorkoutViewState extends State<WorkoutView> {
           savedPose, showFormCorrection, latestMistake);
 
       // update phase counter
-      if (phase == prevPhase) {
-        phaseCounter ++;
-      } else {
-        phaseCounter = 0;
-        prevPhase = phase;
-      }
+      updatePhaseCounter();
 
       for (Pose pose in poses) {
-        // print(phase.toString() + " - " + phaseCounter.toString());
-
-        /** check in pushup position **/
-        // do this before checking form
-        // just check if body is horizontal
-
+        /** check in pushup plank position **/
+        // TODO test in further detail & move to separate function
         // print(inPlank.toString() + " - " + inPlankCounter.toString()); // -- debug --
         if(!inPlankPosition(pose)){
           // if not in plant then
@@ -176,137 +166,15 @@ class _WorkoutViewState extends State<WorkoutView> {
           }
         }
 
-
-
-
         /** checking hips **/
-        double rightHipAngle = findAngle(
-            pose.landmarks[PoseLandmarkType.rightKnee]!,
-            pose.landmarks[PoseLandmarkType.rightHip]!,
-            pose.landmarks[PoseLandmarkType.rightShoulder]!, true);
-
-        double leftHipAngle = findAngle(
-            pose.landmarks[PoseLandmarkType.leftKnee]!,
-            pose.landmarks[PoseLandmarkType.leftHip]!,
-            pose.landmarks[PoseLandmarkType.leftShoulder]!, true);
-
-        double avgHipAngle = (rightHipAngle + leftHipAngle) / 2;
-
-        // -- DEBUG --
-        // print(rightHipAngle.toString() + " | " + leftHipAngle.toString());
-        // print(avgHipAngle);
-        // _overlay[4] = _generalOverlay(Colors.deepPurple, avgHipAngle.toStringAsFixed(1), 40, 68+180);
-
-        // checking if hips are too high or too low
-        if (!pushUpAngles.checkHipAngles(rightHipAngle, leftHipAngle)) {
-          hipErrorCounter ++;
-          if (hipErrorCounter > 6) {
-            hipErrorCounter = 0;
-            hipPosition = pose;
-            triggerFormCorrection(
-                "FEEDBACK - hips out of place (" + avgHipAngle.toString() + ")",
-                FormMistake.LOW_HIPS);
-          }
-          /*
-          // if too low
-          if (avgHipAngle > pushUpAngles.hipAngleMax) {
-            triggerFormCorrection(
-                "FEEDBACK - hips too low (" + avgHipAngle.toString() + ")",
-                FormMistake.LOW_HIPS);
-          } else if (avgHipAngle < pushUpAngles.hipAngleMin) {
-            triggerFormCorrection(
-                "FEEDBACK - hips too high (" + avgHipAngle.toString() + ")",
-                FormMistake.HIGH_HIPS);
-          }
-           */
-        }
+        checkHips(pose);
 
         /** checking legs **/
         // ankle-knee-hip - close to 180
-
+        // TODO add functionality & test it
 
         /** checking arms **/
-        double rightArmAngle = findAngle(
-            pose.landmarks[PoseLandmarkType.rightWrist]!,
-            pose.landmarks[PoseLandmarkType.rightElbow]!,
-            pose.landmarks[PoseLandmarkType.rightShoulder]!, false);
-
-        double leftArmAngle = findAngle(
-            pose.landmarks[PoseLandmarkType.leftWrist]!,
-            pose.landmarks[PoseLandmarkType.leftElbow]!,
-            pose.landmarks[PoseLandmarkType.leftShoulder]!, false);
-
-        double avgArmAngle = (rightArmAngle + leftArmAngle) / 2;
-
-        // when going down update the minimum arm angle reached
-        if (phase == ExercisePhase.DOWN) {
-          if (avgArmAngle < minArmAngle) {
-            minArmAngle = avgArmAngle;
-            bottomPosition = pose;
-          }
-        }
-
-        // when going up update the maximum arm angle reached
-        if (phase == ExercisePhase.UP) {
-          if (avgArmAngle > maxArmAngle) {
-            maxArmAngle = avgArmAngle;
-            topPosition = pose;
-          }
-        }
-
-        // if in TOP position
-        if (pushUpAngles.checkStartArmAngles(rightArmAngle, leftArmAngle)) {
-          // _overlay[0] = _generalOverlay(Colors.green, "Start Arms", 40, 68);
-
-          if(phase == ExercisePhase.UP){
-            // if we were in UP position, increment rep counter (i.e. one rep has been completed)
-            repCounter++;
-            _overlay[1] = _repCounter(repCounter.toString());
-          } else if (phase == ExercisePhase.DOWN && phaseCounter > 3) {
-            // if we were in DOWN position, never reached BOTTOM (i.e. didn't go low enough)
-            // provide this feedback to user (with angles maybe)
-            triggerFormCorrection(
-                "FEEDBACK - did not go low enough (" + maxArmAngle.toString() + ")",
-                FormMistake.BOTTOM_ARMS);
-          }
-
-          phase = ExercisePhase.TOP;
-          minArmAngle = 181.0;
-        } else {
-          // _overlay[0] = _generalOverlay(Colors.red, "Start Arms", 40, 68);
-          // if we were in the top position but now aren't then we are going DOWN
-          if (phase == ExercisePhase.TOP) {
-            phase = ExercisePhase.DOWN;
-          }
-        }
-
-        // if in BOTTOM position
-        if (pushUpAngles.checkEndArmAngles(rightArmAngle, leftArmAngle)) {
-          // _overlay[1] = _generalOverlay(Colors.green, "End Arms", 40, 68+60);
-
-          // if we were going UP and then got to BOTTOM again - we did not go high enough
-          // TODO - bug - form correction triggered at bottom of rep before even reached top
-          /// observed that when reach bottom the occluded arm sometimes spazams to 180 degrees
-          /// this means when in the BOTTOM position it thinks its in the UP position for a split second
-          /// consistently only one UP then back to DOWN pos
-          /// could track how many UPs we have and only after a certain threshold the form correction can be triggered
-          if (phase == ExercisePhase.UP && phaseCounter > 3) {
-            // provide feedback
-            triggerFormCorrection(
-                "FEEDBACK - did not go high enough (" + maxArmAngle.toString() + ")",
-                FormMistake.TOP_ARMS);
-          }
-
-          phase = ExercisePhase.BOTTOM;
-          maxArmAngle = -1.0;
-        } else {
-          // _overlay[1] = _generalOverlay(Colors.red, "End Arms", 40, 68+60);
-          // if we were in the bottom position but now aren't - then we are going UP
-          if (phase == ExercisePhase.BOTTOM) {
-            phase = ExercisePhase.UP;
-          }
-        }
-
+        checkArms(pose);
       }
 
       _customPaint = CustomPaint(
@@ -318,6 +186,15 @@ class _WorkoutViewState extends State<WorkoutView> {
     _isBusy = false;
     if (mounted) {
       setState(() {});
+    }
+  }
+
+  void updatePhaseCounter() {
+    if (phase == prevPhase) {
+      phaseCounter ++;
+    } else {
+      phaseCounter = 0;
+      prevPhase = phase;
     }
   }
 
@@ -345,6 +222,122 @@ class _WorkoutViewState extends State<WorkoutView> {
     //     rightShoulder.x.toStringAsFixed(2) + ", " + rightShoulder.y.toStringAsFixed(2) +
     //     ", " + thighGrad.toStringAsFixed(2));
     // print(bodyGrad);
+  }
+
+  void checkHips(Pose pose) {
+    double rightHipAngle = findAngle(
+        pose.landmarks[PoseLandmarkType.rightKnee]!,
+        pose.landmarks[PoseLandmarkType.rightHip]!,
+        pose.landmarks[PoseLandmarkType.rightShoulder]!, true);
+
+    double leftHipAngle = findAngle(
+        pose.landmarks[PoseLandmarkType.leftKnee]!,
+        pose.landmarks[PoseLandmarkType.leftHip]!,
+        pose.landmarks[PoseLandmarkType.leftShoulder]!, true);
+
+    double avgHipAngle = (rightHipAngle + leftHipAngle) / 2;
+
+    // -- DEBUG --
+    // print(rightHipAngle.toString() + " | " + leftHipAngle.toString());
+    // print(avgHipAngle);
+    // _overlay[4] = _generalOverlay(Colors.deepPurple, avgHipAngle.toStringAsFixed(1), 40, 68+180);
+
+    // checking if hips are too high or too low
+    if (!pushUpAngles.checkHipAngles(rightHipAngle, leftHipAngle)) {
+      hipErrorCounter ++;
+      if (hipErrorCounter > 6) {
+        hipErrorCounter = 0;
+        hipPosition = pose;
+        triggerFormCorrection(
+            "FEEDBACK - hips out of place (" + avgHipAngle.toString() + ")",
+            FormMistake.LOW_HIPS);
+      }
+      /*
+          // if too low
+          if (avgHipAngle > pushUpAngles.hipAngleMax) {
+            triggerFormCorrection(
+                "FEEDBACK - hips too low (" + avgHipAngle.toString() + ")",
+                FormMistake.LOW_HIPS);
+          } else if (avgHipAngle < pushUpAngles.hipAngleMin) {
+            triggerFormCorrection(
+                "FEEDBACK - hips too high (" + avgHipAngle.toString() + ")",
+                FormMistake.HIGH_HIPS);
+          }
+           */
+    }
+  }
+
+  void checkArms(Pose pose) {
+    double rightArmAngle = findAngle(
+        pose.landmarks[PoseLandmarkType.rightWrist]!,
+        pose.landmarks[PoseLandmarkType.rightElbow]!,
+        pose.landmarks[PoseLandmarkType.rightShoulder]!, false);
+
+    double leftArmAngle = findAngle(
+        pose.landmarks[PoseLandmarkType.leftWrist]!,
+        pose.landmarks[PoseLandmarkType.leftElbow]!,
+        pose.landmarks[PoseLandmarkType.leftShoulder]!, false);
+
+    double avgArmAngle = (rightArmAngle + leftArmAngle) / 2;
+
+    // when going down update the minimum arm angle reached & save pose
+    if (phase == ExercisePhase.DOWN) {
+      if (avgArmAngle < minArmAngle) {
+        minArmAngle = avgArmAngle;
+        bottomPosition = pose;
+      }
+    }
+
+    // when going up update the maximum arm angle reached & save pose
+    if (phase == ExercisePhase.UP) {
+      if (avgArmAngle > maxArmAngle) {
+        maxArmAngle = avgArmAngle;
+        topPosition = pose;
+      }
+    }
+
+    // if in TOP position
+    if (pushUpAngles.checkStartArmAngles(rightArmAngle, leftArmAngle)) {
+
+      if(phase == ExercisePhase.UP){
+        // if we were in UP position, increment rep counter (i.e. one rep has been completed)
+        repCounter++;
+        _overlay[1] = _repCounter(repCounter.toString());
+      } else if (phase == ExercisePhase.DOWN && phaseCounter > phaseLimit) {
+        // if we were in DOWN position, never reached BOTTOM (i.e. didn't go low enough)
+        // provide this feedback to user (with angles maybe)
+        triggerFormCorrection(
+            "FEEDBACK - did not go low enough (" + maxArmAngle.toString() + ")",
+            FormMistake.BOTTOM_ARMS);
+      }
+
+      phase = ExercisePhase.TOP;
+      minArmAngle = 181.0;
+    } else {
+      // if we were in the top position but now aren't then we are going DOWN
+      if (phase == ExercisePhase.TOP) {
+        phase = ExercisePhase.DOWN;
+      }
+    }
+
+    // if in BOTTOM position
+    if (pushUpAngles.checkEndArmAngles(rightArmAngle, leftArmAngle)) {
+      // if we were going UP and then got to BOTTOM again - we did not go high enough
+      if (phase == ExercisePhase.UP && phaseCounter > phaseLimit) {
+        // provide feedback
+        triggerFormCorrection(
+            "FEEDBACK - did not go high enough (" + maxArmAngle.toString() + ")",
+            FormMistake.TOP_ARMS);
+      }
+
+      phase = ExercisePhase.BOTTOM;
+      maxArmAngle = -1.0;
+    } else {
+      // if we were in the bottom position but now aren't - then we are going UP
+      if (phase == ExercisePhase.BOTTOM) {
+        phase = ExercisePhase.UP;
+      }
+    }
   }
 
   double findAngle(PoseLandmark first, PoseLandmark mid, PoseLandmark last, bool hipFlag) {
@@ -425,6 +418,7 @@ class _WorkoutViewState extends State<WorkoutView> {
     }
   }
 
+  // -- used for debugging --
   Widget _generalOverlay(Color _color, String _text, double _top, double _left) {
     return Positioned(
         top: _top,
@@ -513,38 +507,4 @@ class _WorkoutViewState extends State<WorkoutView> {
               ),
             )));
   }
-}
-
-class PushUpAngles {
-  final double startArmAngleMax = 181.0;
-  final double startArmAngleMin = 155.0;//180;//
-  final double endArmAngleMax = 95.0;//30;//
-  final double endArmAngleMin = 10;
-  final double hipAngleMax = 190;
-  final double hipAngleMin = 150;
-
-  PushUpAngles();
-
-  bool checkStartArmAngles(right, left) {
-    return right < startArmAngleMax &&
-        right > startArmAngleMin &&
-        left < startArmAngleMax &&
-        left > startArmAngleMin;
-  }
-
-  bool checkEndArmAngles(right, left) {
-    return right < endArmAngleMax &&
-        right > endArmAngleMin &&
-        left < endArmAngleMax &&
-        left > endArmAngleMin;
-  }
-
-  bool checkHipAngles(right, left) {
-    return right < hipAngleMax &&
-        right > hipAngleMin &&
-        left < hipAngleMax &&
-        left > hipAngleMin;
-  }
-
-  // TODO - possibly check occlusion/likelihood (if < threshold, don't track that arm)
 }
