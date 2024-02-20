@@ -53,20 +53,27 @@ class _WorkoutViewState extends State<WorkoutView> {
   int repGoal = 5;
   bool workoutComplete = false;
 
-  // [text feedback] [rep counter] [timer] [end workout]
-  List<Widget?> _overlay = [Container(), Container(), Container(), Container()];
+  // [text feedback] [rep counter] [timer] [end workout] [plank position]
+  List<Widget?> _overlay = [Container(), Container(), Container(), Container(), Container()];
 
   // form correction variables
   bool showFormCorrection = false;
   FormMistake latestMistake = FormMistake.BENT_LEGS; // doesn't matter what it is initialised to
   Pose savedPose = Pose(landmarks: {});
+
   Pose bottomPosition = Pose(landmarks: {});
   Pose topPosition = Pose(landmarks: {});
+
   Pose hipPosition = Pose(landmarks: {});
+  int hipErrorCounter = 0;
 
   // form angle variables
   double maxArmAngle = -1.0;
   double minArmAngle = 181.0;
+
+  // plank variables
+  bool inPlank = false;
+  int inPlankCounter = -5;
 
 
   @override
@@ -125,6 +132,53 @@ class _WorkoutViewState extends State<WorkoutView> {
       for (Pose pose in poses) {
         // print(phase.toString() + " - " + phaseCounter.toString());
 
+        /** check in pushup position **/
+        // do this before checking form
+        // just check if body is horizontal
+
+        // print(inPlank.toString() + " - " + inPlankCounter.toString()); // -- debug --
+        if(!inPlankPosition(pose)){
+          // if not in plant then
+            // don't do any form correction
+            // update overlay
+          if (inPlankCounter > 5) {
+            inPlank = false;
+            inPlankCounter = 0;
+            _overlay[4] = _textFeedback("Get into the plank pushup position");
+            continue;
+          } else if (inPlank) {
+            inPlankCounter ++;
+          } else {
+            _overlay[4] = _textFeedback("Get into the plank pushup position");
+            continue;
+          }
+        } else {
+          if(inPlankCounter < 0) {
+            inPlankCounter ++;
+          } else {
+            inPlank = true;
+            inPlankCounter = 0;
+            /*
+          if(!inPlank) {
+            inPlank = true;
+            showFormCorrection()
+            _overlay[4] = _textFeedback("Well Done!");
+            showFormCorrection = true;
+            Future.delayed(const Duration(seconds: 2), () {
+              _overlay[4] = Container();
+              showFormCorrection = false;
+            });
+          } else {
+            _overlay[4] = Container();
+          }
+           */
+            _overlay[4] = Container();
+          }
+        }
+
+
+
+
         /** checking hips **/
         double rightHipAngle = findAngle(
             pose.landmarks[PoseLandmarkType.rightKnee]!,
@@ -145,10 +199,14 @@ class _WorkoutViewState extends State<WorkoutView> {
 
         // checking if hips are too high or too low
         if (!pushUpAngles.checkHipAngles(rightHipAngle, leftHipAngle)) {
-          hipPosition = pose;
-          triggerFormCorrection(
+          hipErrorCounter ++;
+          if (hipErrorCounter > 6) {
+            hipErrorCounter = 0;
+            hipPosition = pose;
+            triggerFormCorrection(
                 "FEEDBACK - hips out of place (" + avgHipAngle.toString() + ")",
                 FormMistake.LOW_HIPS);
+          }
           /*
           // if too low
           if (avgHipAngle > pushUpAngles.hipAngleMax) {
@@ -204,7 +262,7 @@ class _WorkoutViewState extends State<WorkoutView> {
             // if we were in UP position, increment rep counter (i.e. one rep has been completed)
             repCounter++;
             _overlay[1] = _repCounter(repCounter.toString());
-          } else if (phase == ExercisePhase.DOWN && phaseCounter > 2) {
+          } else if (phase == ExercisePhase.DOWN && phaseCounter > 3) {
             // if we were in DOWN position, never reached BOTTOM (i.e. didn't go low enough)
             // provide this feedback to user (with angles maybe)
             triggerFormCorrection(
@@ -232,7 +290,7 @@ class _WorkoutViewState extends State<WorkoutView> {
           /// this means when in the BOTTOM position it thinks its in the UP position for a split second
           /// consistently only one UP then back to DOWN pos
           /// could track how many UPs we have and only after a certain threshold the form correction can be triggered
-          if (phase == ExercisePhase.UP && phaseCounter > 2) {
+          if (phase == ExercisePhase.UP && phaseCounter > 3) {
             // provide feedback
             triggerFormCorrection(
                 "FEEDBACK - did not go high enough (" + maxArmAngle.toString() + ")",
@@ -261,6 +319,32 @@ class _WorkoutViewState extends State<WorkoutView> {
     if (mounted) {
       setState(() {});
     }
+  }
+
+  bool inPlankPosition(Pose pose) {
+
+    double flatGrad = 0.8;
+
+    PoseLandmark rightKnee = pose.landmarks[PoseLandmarkType.rightKnee]!;
+    PoseLandmark rightHip = pose.landmarks[PoseLandmarkType.rightHip]!;
+    PoseLandmark rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder]!;
+
+    double thighGrad = (rightKnee.x - rightHip.x) / (rightKnee.y - rightHip.y);
+    double bodyGrad = (rightHip.x - rightShoulder.x) / (rightHip.y - rightShoulder.y);
+
+    // print(thighGrad.toStringAsFixed(2) + ", " + bodyGrad.toStringAsFixed(2));
+
+    if((thighGrad > flatGrad && bodyGrad > flatGrad) ||
+        (thighGrad < -flatGrad && bodyGrad < -flatGrad)) {
+      return true;
+    } else {
+      return false;
+    }
+
+    // print(rightHip.x.toStringAsFixed(2) + ", " + rightHip.y.toStringAsFixed(2) + ", " +
+    //     rightShoulder.x.toStringAsFixed(2) + ", " + rightShoulder.y.toStringAsFixed(2) +
+    //     ", " + thighGrad.toStringAsFixed(2));
+    // print(bodyGrad);
   }
 
   double findAngle(PoseLandmark first, PoseLandmark mid, PoseLandmark last, bool hipFlag) {
@@ -328,7 +412,7 @@ class _WorkoutViewState extends State<WorkoutView> {
           _overlay[0] = _textFeedback("Straighten out your hips"); // old - Try bring your hips upwards
           savedPose = generateFormCorrection(hipPosition, formMistake);
           // need new audio for hips
-          // AudioPlayer().play(AssetSource('audio/lowHipsFormCorrection.mp3'));
+          AudioPlayer().play(AssetSource('audio/lowHipsFormCorrection.mp3'));
         case FormMistake.BENT_LEGS:
           // TODO: Handle this case.
       }

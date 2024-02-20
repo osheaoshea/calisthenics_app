@@ -6,13 +6,13 @@
 
 Map<String, (double, double)> bottomArms = {
   'leftForearm': (1, 0),
-  'leftBicep': (1, 0),
+  'leftBicep': (1, -20),
   'leftBody': (1, 0),
   'leftQuad': (1, 0),
   'leftCalf': (1, 0),
 
   'rightForearm': (1, 0),
-  'rightBicep': (1, 0),
+  'rightBicep': (1, -20),
   'rightBody': (1, 0),
   'rightQuad': (1, 0),
   'rightCalf': (1, 0),
@@ -21,14 +21,14 @@ Map<String, (double, double)> bottomArms = {
 };
 
 Map<String, (double, double)> topArms = {
-  'leftForearm': (1, 0),
-  'leftBicep': (1, 0),
+  'leftForearm': (0, 90),
+  'leftBicep': (0, 90),
   'leftBody': (1, 0),
   'leftQuad': (1, 0),
   'leftCalf': (1, 0),
 
-  'rightForearm': (1, 0),
-  'rightBicep': (1, 0),
+  'rightForearm': (0, 90),
+  'rightBicep': (0, 90),
   'rightBody': (1, 0),
   'rightQuad': (1, 0),
   'rightCalf': (1, 0),
