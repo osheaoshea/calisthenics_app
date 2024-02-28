@@ -1,11 +1,14 @@
 import 'dart:math';
 
-import 'package:calisthenics_app/utils/form_correction_poses.dart';
+import 'package:calisthenics_app/common/base_FC_poses.dart';
+import 'package:calisthenics_app/common/exercise_type.dart';
 import 'package:calisthenics_app/common/form_mistake.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
 
+import 'FC_pose_factory.dart';
 
-Pose generateFormCorrection(Pose pose, FormMistake type) {
+
+Pose generateFormCorrection(Pose pose, FormMistake formMistake, ExerciseType exerciseType){
 
   Map<String, (double, double)> bodyStructure = getLimbAngleAndLength(pose);
 
@@ -14,22 +17,24 @@ Pose generateFormCorrection(Pose pose, FormMistake type) {
   bool invert = pose.landmarks[PoseLandmarkType.leftShoulder]!.x >
       pose.landmarks[PoseLandmarkType.leftHip]!.x;
 
-  switch (type) {
+  BaseFCPoses FCPoses = FCPoseFactory.getFCPoses(exerciseType);
+
+  switch (formMistake) {
     case FormMistake.BOTTOM_ARMS:
-      correction = Map.from(bottomArms);
+      correction = Map.from(FCPoses.bottomArms);
       if (invert) {
         correction.updateAll((key, value) => (value.$1, -value.$2));
       }
     case FormMistake.TOP_ARMS:
-      correction = Map.from(topArms);
+      correction = Map.from(FCPoses.topArms);
     case FormMistake.HIGH_HIPS:
-      correction = Map.from(highHips);
+      correction = Map.from(FCPoses.highHips);
       invert ? invertAngles(correction) : null;
     case FormMistake.LOW_HIPS:
-      correction = Map.from(lowHips);
+      correction = Map.from(FCPoses.lowHips);
       invert ? invertAngles(correction) : null;
     case FormMistake.BENT_LEGS:
-      correction = Map.from(bentLegs);
+      correction = Map.from(FCPoses.bentLegs);
       invert ? invertAngles(correction) : null;
   }
 
