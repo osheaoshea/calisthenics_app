@@ -30,7 +30,7 @@ class WorkoutView extends StatefulWidget {
 class _WorkoutViewState extends State<WorkoutView> {
 
   final PoseDetector _poseDetector =
-      PoseDetector(options: PoseDetectorOptions());
+  PoseDetector(options: PoseDetectorOptions());
   bool _canProcess = true;
   bool _isBusy = false;
 
@@ -51,7 +51,7 @@ class _WorkoutViewState extends State<WorkoutView> {
   int legErrorCounter = 0;
   int legErrorLimit = 6;
 
-  int repCounter = 0; // TODO make rep counter own widget inside camera, then just pass the num value over
+  int repCounter = 0;
   int repGoal = 5;
   bool workoutComplete = false;
 
@@ -74,9 +74,9 @@ class _WorkoutViewState extends State<WorkoutView> {
   double minArmAngle = 181.0;
 
   // plank variables
-  // TODO more thoroughly test plank checker
   bool inPlank = false;
   int inPlankCounter = -5;
+  int plankErrorLimit = 5;
   double flatGrad = 0.8;
 
 
@@ -130,41 +130,19 @@ class _WorkoutViewState extends State<WorkoutView> {
 
       for (Pose pose in poses) {
         /** check in pushup plank position **/
-        // TODO test in further detail & move to separate function
-        // print(inPlank.toString() + " - " + inPlankCounter.toString()); // -- debug --
-        if(!inPlankPosition(pose)){
-          // if not in plant then
-            // don't do any form correction
-            // update overlay
-          if (inPlankCounter > 5) {
-            inPlank = false;
-            inPlankCounter = 0;
-            _overlay[4] = _textFeedback("Get into the plank pushup position");
-            continue;
-          } else if (inPlank) {
-            inPlankCounter ++;
-          } else {
-            _overlay[4] = _textFeedback("Get into the plank pushup position");
-            continue;
-          }
-        } else {
-          if(inPlankCounter < 0) {
-            inPlankCounter ++;
-          } else {
-            inPlank = true;
-            inPlankCounter = 0;
-            _overlay[4] = Container();
-          }
+        bool skipChecks = !checkPlank(pose);
+
+        // if not in plank position, skip the rest of the checks
+        if (!skipChecks) {
+          /** checking hips **/
+          checkHips(pose);
+
+          /** checking legs **/
+          checkLegs(pose);
+
+          /** checking arms & increment reps **/
+          checkArms(pose);
         }
-
-        /** checking hips **/
-        checkHips(pose);
-
-        /** checking legs **/
-        checkLegs(pose);
-
-        /** checking arms & increment reps **/
-        checkArms(pose);
       }
 
       _customPaint = CustomPaint(
@@ -188,6 +166,36 @@ class _WorkoutViewState extends State<WorkoutView> {
     }
   }
 
+  bool checkPlank(Pose pose) {
+    // Check if the user is in the plank position.
+    if (inPlankPosition(pose)) {
+      // If in plank and the counter is negative (initial buffer), increment towards 0.
+      if (inPlankCounter < 0) {
+        inPlankCounter++;
+      } else {
+        // User is in plank and has overcome the initial buffer or has returned to plank.
+        inPlank = true;
+        inPlankCounter = 0; // Reset counter as user is in correct position.
+        _overlay[4] = Container(); // Clear feedback as user is in correct position.
+      }
+    } else {
+      // Not in plank position, decrement or increment the counter based on the current state.
+      if (inPlankCounter < plankErrorLimit) {
+        // Increment the counter if it's less than 5 to avoid immediate feedback.
+        inPlankCounter++;
+      }
+
+      // Provide feedback if not in plank position for more than 5 frames.
+      if (inPlankCounter >= plankErrorLimit) {
+        inPlank = false;
+        _overlay[4] = _textFeedback("Get into the plank pushup position");
+        return false; // Return false as the user is not in the correct position.
+      }
+    }
+
+    return inPlank; // Return the current state of the inPlank flag.
+  }
+
   bool inPlankPosition(Pose pose) {
     PoseLandmark rightKnee = pose.landmarks[PoseLandmarkType.rightKnee]!;
     PoseLandmark rightHip = pose.landmarks[PoseLandmarkType.rightHip]!;
@@ -208,23 +216,19 @@ class _WorkoutViewState extends State<WorkoutView> {
     double rightHipAngle = findAngle(
         pose.landmarks[PoseLandmarkType.rightKnee]!,
         pose.landmarks[PoseLandmarkType.rightHip]!,
-        pose.landmarks[PoseLandmarkType.rightShoulder]!, true);
+        pose.landmarks[PoseLandmarkType.rightShoulder]!);
 
     double leftHipAngle = findAngle(
         pose.landmarks[PoseLandmarkType.leftKnee]!,
         pose.landmarks[PoseLandmarkType.leftHip]!,
-        pose.landmarks[PoseLandmarkType.leftShoulder]!, true);
+        pose.landmarks[PoseLandmarkType.leftShoulder]!);
 
     double avgHipAngle = (rightHipAngle + leftHipAngle) / 2;
-
-    // -- DEBUG --
-    // print(rightHipAngle.toString() + " | " + leftHipAngle.toString());
-    // print(avgHipAngle);
-    // _overlay[5] = _generalOverlay(Colors.deepPurple, avgHipAngle.toStringAsFixed(1), 40, 68+180);
 
     // checking if hips are too high or too low
     if (!pushUpAngles.checkHipAngles(rightHipAngle, leftHipAngle)) {
       hipErrorCounter ++;
+      // TODO - fix high hips error
       if (hipErrorCounter > hipErrorLimit) {
         hipErrorCounter = 0;
         hipPosition = pose;
@@ -232,18 +236,6 @@ class _WorkoutViewState extends State<WorkoutView> {
             "FEEDBACK - hips out of place (" + avgHipAngle.toString() + ")",
             FormMistake.LOW_HIPS);
       }
-      /*
-          // if too low
-          if (avgHipAngle > pushUpAngles.hipAngleMax) {
-            triggerFormCorrection(
-                "FEEDBACK - hips too low (" + avgHipAngle.toString() + ")",
-                FormMistake.LOW_HIPS);
-          } else if (avgHipAngle < pushUpAngles.hipAngleMin) {
-            triggerFormCorrection(
-                "FEEDBACK - hips too high (" + avgHipAngle.toString() + ")",
-                FormMistake.HIGH_HIPS);
-          }
-           */
     }
   }
 
@@ -251,12 +243,12 @@ class _WorkoutViewState extends State<WorkoutView> {
     double rightLegAngle = findAngle(
         pose.landmarks[PoseLandmarkType.rightAnkle]!,
         pose.landmarks[PoseLandmarkType.rightKnee]!,
-        pose.landmarks[PoseLandmarkType.rightHip]!, true);
+        pose.landmarks[PoseLandmarkType.rightHip]!);
 
     double leftLegAngle = findAngle(
         pose.landmarks[PoseLandmarkType.leftAnkle]!,
         pose.landmarks[PoseLandmarkType.leftKnee]!,
-        pose.landmarks[PoseLandmarkType.leftHip]!, true);
+        pose.landmarks[PoseLandmarkType.leftHip]!);
 
     double avgLegAngle = (rightLegAngle + leftLegAngle) / 2;
 
@@ -276,12 +268,12 @@ class _WorkoutViewState extends State<WorkoutView> {
     double rightArmAngle = findAngle(
         pose.landmarks[PoseLandmarkType.rightWrist]!,
         pose.landmarks[PoseLandmarkType.rightElbow]!,
-        pose.landmarks[PoseLandmarkType.rightShoulder]!, false);
+        pose.landmarks[PoseLandmarkType.rightShoulder]!);
 
     double leftArmAngle = findAngle(
         pose.landmarks[PoseLandmarkType.leftWrist]!,
         pose.landmarks[PoseLandmarkType.leftElbow]!,
-        pose.landmarks[PoseLandmarkType.leftShoulder]!, false);
+        pose.landmarks[PoseLandmarkType.leftShoulder]!);
 
     double avgArmAngle = (rightArmAngle + leftArmAngle) / 2;
 
@@ -345,7 +337,7 @@ class _WorkoutViewState extends State<WorkoutView> {
     }
   }
 
-  double findAngle(PoseLandmark first, PoseLandmark mid, PoseLandmark last, bool hipFlag) {
+  double findAngle(PoseLandmark first, PoseLandmark mid, PoseLandmark last) {
     double radians = atan2(last.y - mid.y, last.x - mid.x) -
         atan2(first.y - mid.y, first.x - mid.x);
 
@@ -354,32 +346,6 @@ class _WorkoutViewState extends State<WorkoutView> {
     if (degrees > 180.0) {
       degrees = 360.0 - degrees;
     }
-
-    // -- hip debugging --
-    /*
-    if (hipFlag) {
-      double quadGrad = (mid.x - first.x) / (mid.y - first.y);
-      double bodyGrad = (last.x - mid.x) / (last.y - mid.y);
-      String test;
-      if(quadGrad > bodyGrad){
-        test = "QUAD";
-      } else {
-        test = "BODY";
-      }
-
-      // find orientation
-      if(first.x > mid.x) {
-        print("A - " + test + " - " + quadGrad.toString() + " | " + bodyGrad.toString());
-      } else {
-        print("B - " + test + " - " + quadGrad.toString() + " | " + bodyGrad.toString());
-      }
-
-      // check the gradient of first - mid
-      // check gradient of mid - last
-      // if A is
-    }
-
-     */
 
     return degrees;
   }
@@ -402,10 +368,10 @@ class _WorkoutViewState extends State<WorkoutView> {
           savedPose = generateFormCorrection(topPosition, formMistake);
           AudioPlayer().play(AssetSource('audio/topArmsFormCorrection.mp3'));
         case FormMistake.HIGH_HIPS:
-          // TODO clean up - not in use
-          // _overlay[3] = _textFeedback("Try and lower your hips");
-          // savedPose = generateFormCorrection(hipPosition, formMistake);
-          // AudioPlayer().play(AssetSource('audio/highHipsFormCorrection.mp3'));
+        // TODO clean up - not in use
+        // _overlay[3] = _textFeedback("Try and lower your hips");
+        // savedPose = generateFormCorrection(hipPosition, formMistake);
+        // AudioPlayer().play(AssetSource('audio/highHipsFormCorrection.mp3'));
         case FormMistake.LOW_HIPS:
           _overlay[0] = _textFeedback("Straighten out your hips"); // old - Try bring your hips upwards
           savedPose = generateFormCorrection(hipPosition, formMistake);
@@ -442,9 +408,9 @@ class _WorkoutViewState extends State<WorkoutView> {
                 _text,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 11,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
                 ),
               ),
             )));
@@ -480,10 +446,10 @@ class _WorkoutViewState extends State<WorkoutView> {
                     "/$repGoal",
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.grey[200],
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      letterSpacing: 1
+                        color: Colors.grey[200],
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        letterSpacing: 1
                     ),
                   ),
                 ],
