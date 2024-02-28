@@ -11,17 +11,26 @@ Pose generateFormCorrection(Pose pose, FormMistake type) {
 
   Map<String, (double, double)> correction;
 
+  bool invert = pose.landmarks[PoseLandmarkType.leftShoulder]!.x >
+      pose.landmarks[PoseLandmarkType.leftHip]!.x;
+
   switch (type) {
     case FormMistake.BOTTOM_ARMS:
-      correction = bottomArms;
+      correction = Map.from(bottomArms);
+      if (invert) {
+        correction.updateAll((key, value) => (value.$1, -value.$2));
+      }
     case FormMistake.TOP_ARMS:
-      correction = topArms;
+      correction = Map.from(topArms);
     case FormMistake.HIGH_HIPS:
-      correction = highHips;
+      correction = Map.from(highHips);
+      invert ? invertAngles(correction) : null;
     case FormMistake.LOW_HIPS:
-      correction = lowHips;
+      correction = Map.from(lowHips);
+      invert ? invertAngles(correction) : null;
     case FormMistake.BENT_LEGS:
-      correction = bentLegs;
+      correction = Map.from(bentLegs);
+      invert ? invertAngles(correction) : null;
   }
 
   // LEFT
@@ -116,6 +125,13 @@ Pose generateFormCorrection(Pose pose, FormMistake type) {
           toRadians(correction['toNose']!.$2));
 
   return pose;
+}
+
+void invertAngles(Map<String, (double, double)> correction) {
+  correction.updateAll((key, value) => value.$1 == 0
+      ? (value.$1, (value.$2 + 140) % 360)
+      : value
+  );
 }
 
 PoseLandmark findNewLandmark(PoseLandmark a, PoseLandmarkType type, double dist, double angle) {

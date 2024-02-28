@@ -5,6 +5,8 @@ class PushUpAngles {
   final double endArmAngleMin = 10;
   final double hipAngleMax = 190;
   final double hipAngleMin = 150;
+  final double legAngleMax = 180;
+  final double legAngleMin = 155;//179;//
 
   PushUpAngles();
 
@@ -27,6 +29,13 @@ class PushUpAngles {
         right > hipAngleMin &&
         left < hipAngleMax &&
         left > hipAngleMin;
+  }
+
+  bool checkLegAngles(right, left) {
+    return right < legAngleMax &&
+        right > legAngleMin &&
+        left < legAngleMax &&
+        left > legAngleMin;
   }
 
 // TODO - possibly check occlusion/likelihood (if < threshold, don't track that arm)
