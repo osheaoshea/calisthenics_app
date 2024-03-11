@@ -1,0 +1,6 @@
+enum LegCheckReturn {
+  FC_STRAIGHTEN_LEGS,
+  FC_BEND_LESS,
+  FC_BEND_MORE,
+  PASS
+}

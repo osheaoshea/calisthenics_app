@@ -36,6 +36,9 @@ Pose generateFormCorrection(Pose pose, FormMistake formMistake, ExerciseType exe
     case FormMistake.BENT_LEGS:
       correction = Map.from(FCPoses.bentLegs);
       invert ? invertAngles(correction) : null;
+    case FormMistake.BEND_LEGS_MORE || FormMistake.BEND_LEGS_LESS:
+      correction = Map.from(FCPoses.bentLegs);
+      invert ? invertAngles(correction) : null;
   }
 
   // LEFT
@@ -134,9 +137,16 @@ Pose generateFormCorrection(Pose pose, FormMistake formMistake, ExerciseType exe
 
 void invertAngles(Map<String, (double, double)> correction) {
   correction.updateAll((key, value) => value.$1 == 0
-      ? (value.$1, (value.$2 + 140) % 360)
+      ? (value.$1, reflectAngleAboutYAxis(value.$2))
       : value
   );
+}
+
+// reflect angle about the visual Y axis on the screen
+double reflectAngleAboutYAxis(double x) {
+  double translate = x - 90;
+  double reflect = 360 - translate;
+  return (reflect + 90) % 360;
 }
 
 PoseLandmark findNewLandmark(PoseLandmark a, PoseLandmarkType type, double dist, double angle) {

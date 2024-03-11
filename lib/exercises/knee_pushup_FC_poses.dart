@@ -81,13 +81,13 @@ class KneePushupFCPoses implements BaseFCPoses {
     'leftBicep': (1, 0),
     'leftBody': (1, 0),
     'leftQuad': (0, 200),
-    'leftCalf': (0, 200),
+    'leftCalf': (0, 100),
 
     'rightForearm': (1, 0),
     'rightBicep': (1, 0),
     'rightBody': (1, 0),
     'rightQuad': (0, 200),
-    'rightCalf': (0, 200),
+    'rightCalf': (0, 100),
 
     'toNose': (1, 0),
   };

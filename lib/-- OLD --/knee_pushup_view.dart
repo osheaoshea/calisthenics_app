@@ -1,40 +1,38 @@
-import 'package:calisthenics_app/common/base_exercise.dart';
+/*
+import 'dart:math';
+
 import 'package:calisthenics_app/common/exercise_type.dart';
-import 'package:calisthenics_app/common/leg_check_return.dart';
-import 'package:calisthenics_app/exercises/knee_pushup.dart';
+import 'package:calisthenics_app/exercises/knee_pushup_angles.dart';
 import 'package:calisthenics_app/pages/camera_view.dart';
 import 'package:calisthenics_app/painters/pose_painter.dart';
 import 'package:calisthenics_app/utils/form_correction_generator.dart';
 import 'package:calisthenics_app/common/form_mistake.dart';
+import 'package:calisthenics_app/common/exercise_phase.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:audioplayers/audioplayers.dart';
 
-import '../common/arm_check_return.dart';
-import '../exercises/pushup.dart';
 
 
-class WorkoutView extends StatefulWidget {
-  const WorkoutView({
+class KneePushupView extends StatefulWidget {
+  const KneePushupView({
     super.key,
-    required this.exerciseType,
     this.onCameraFeedReady,
     this.onCameraLensDirectionChanged,
   });
 
-  final ExerciseType exerciseType;
   final Function()? onCameraFeedReady;
   final Function(CameraLensDirection direction)? onCameraLensDirectionChanged;
 
   @override
-  State<WorkoutView> createState() => _WorkoutViewState();
+  State<KneePushupView> createState() => _KneePushupViewState();
 }
 
-class _WorkoutViewState extends State<WorkoutView> {
+class _KneePushupViewState extends State<KneePushupView> {
 
   final PoseDetector _poseDetector =
-  PoseDetector(options: PoseDetectorOptions());
+      PoseDetector(options: PoseDetectorOptions());
   bool _canProcess = true;
   bool _isBusy = false;
 
@@ -42,12 +40,24 @@ class _WorkoutViewState extends State<WorkoutView> {
 
   var _cameraLensDirection = CameraLensDirection.back;
 
-  late BaseExercise exercise;
-  bool debug_check = false;
+  final KneePushupAngles kneePushupAngles = KneePushupAngles();
+  final ExerciseType exerciseType = ExerciseType.KNEE_PUSHUP;
 
-  // TODO - move repGoal to some config
-  int repGoal = 50;
+  ExercisePhase phase = ExercisePhase.NA;
+  ExercisePhase prevPhase = ExercisePhase.NA;
 
+  // used to delay form corrections
+  int phaseCounter = 0; // track how long we have been in a given phase
+  int phaseLimit = 3;
+  // TODO - these error counters don't reset if back in position
+  int hipErrorCounter = 0;
+  int hipErrorLimit = 6;
+  int legLowErrorCounter = 0;
+  int legHighErrorCounter = 0;
+  int legErrorLimit = 6;
+
+  int repCounter = 0;
+  int repGoal = 5;
   bool workoutComplete = false;
 
   // [0-text feedback] [1-rep counter] [2-timer] [3-end workout] [4-plank position] [5-debug]
@@ -59,25 +69,25 @@ class _WorkoutViewState extends State<WorkoutView> {
   FormMistake latestMistake = FormMistake.BENT_LEGS; // doesn't matter what it is initialised to
   Pose savedPose = Pose(landmarks: {});
 
-  // TODO - sort plank functionality when adding in 'exercise setup pages' etc
+  Pose bottomPosition = Pose(landmarks: {});
+  Pose topPosition = Pose(landmarks: {});
+  Pose hipPosition = Pose(landmarks: {});
+  Pose legPosition = Pose(landmarks: {});
+
+  // form angle variables
+  double maxArmAngle = -1.0;
+  double minArmAngle = 181.0;
+
   // plank variables
   bool inPlank = false;
   int inPlankCounter = -5;
-  int plankErrorLimit = 5;
+  int plankErrorLimit = 10;
   double flatGrad = 0.8;
 
 
   @override
   void initState() {
-    // load exercise
-    switch(widget.exerciseType) {
-      case ExerciseType.PUSHUP:
-        exercise = Pushup(repGoal);
-      case ExerciseType.KNEE_PUSHUP:
-        exercise = KneePushup(repGoal);
-    }
-
-    _overlay[1] = _repCounter(exercise.repCounter.reps.toString());
+    _overlay[1] = _repCounter(repCounter.toString());
     super.initState();
   }
 
@@ -109,7 +119,7 @@ class _WorkoutViewState extends State<WorkoutView> {
     setState(() {});
 
     // finish workout when rep goal is met
-    workoutComplete = exercise.repCounter.checkGoal();
+    workoutComplete = repCounter >= repGoal;
 
     final poses = await _poseDetector.processImage(inputImage);
 
@@ -121,61 +131,22 @@ class _WorkoutViewState extends State<WorkoutView> {
           savedPose, showFormCorrection, latestMistake);
 
       // update phase counter
-      exercise.phaseTracker.updatePhaseCounter();
+      updatePhaseCounter();
 
       for (Pose pose in poses) {
-
-        // TODO - move these checks to separate class
-        // TODO - (might have a base class that is overridden by specific exercises)
         /** check in pushup plank position **/
         bool skipChecks = !checkPlank(pose);
 
         // if not in plank position, skip the rest of the checks
         if (!skipChecks) {
-
           /** checking hips **/
-          if(!exercise.checkHips(pose)) {
-            // trigger form correction
-            triggerFormCorrection("FEEDBACK - hips out of place",
-                FormMistake.LOW_HIPS);
-          }
+          checkHips(pose);
 
           /** checking legs **/
-          LegCheckReturn legCheckReturn = exercise.checkLegs(pose);
-          switch(legCheckReturn) {
-            case LegCheckReturn.FC_STRAIGHTEN_LEGS:
-              // trigger form correction
-              triggerFormCorrection("FEEDBACK - legs out of place",
-                  FormMistake.BENT_LEGS);
-            case LegCheckReturn.FC_BEND_LESS:
-              // trigger form correction
-              triggerFormCorrection("FEEDBACK - legs out of place",
-                  FormMistake.BEND_LEGS_LESS);
-            case LegCheckReturn.FC_BEND_MORE:
-              // trigger form correction
-              triggerFormCorrection("FEEDBACK - legs out of place",
-                  FormMistake.BEND_LEGS_MORE);
-            case LegCheckReturn.PASS:
-              // no form correction needed
-          }
+          checkLegs(pose);
 
           /** checking arms & increment reps **/
-          ArmCheckReturn armCheckReturn = exercise.checkArms(pose);
-          switch (armCheckReturn) {
-            case ArmCheckReturn.UPDATE_REP:
-              _overlay[1] = _repCounter(exercise.repCounter.reps.toString());
-            case ArmCheckReturn.FC_BOTTOM_ARMS:
-            // trigger form correction
-              triggerFormCorrection("FEEDBACK - did not go low enough",
-                  FormMistake.BOTTOM_ARMS);
-            case ArmCheckReturn.FC_TOP_ARMS:
-            // trigger form correction
-              triggerFormCorrection("FEEDBACK - did not go high enough",
-                  FormMistake.TOP_ARMS);
-            case ArmCheckReturn.PASS:
-            // no form correction needed
-          }
-
+          checkArms(pose);
         }
       }
 
@@ -188,6 +159,15 @@ class _WorkoutViewState extends State<WorkoutView> {
     _isBusy = false;
     if (mounted) {
       setState(() {});
+    }
+  }
+
+  void updatePhaseCounter() {
+    if (phase == prevPhase) {
+      phaseCounter ++;
+    } else {
+      phaseCounter = 0;
+      prevPhase = phase;
     }
   }
 
@@ -237,7 +217,160 @@ class _WorkoutViewState extends State<WorkoutView> {
     }
   }
 
-  // TODO - move to separate class (NOT SURE HOW TO DO YET)
+  void checkHips(Pose pose) {
+    double rightHipAngle = findAngle(
+        pose.landmarks[PoseLandmarkType.rightKnee]!,
+        pose.landmarks[PoseLandmarkType.rightHip]!,
+        pose.landmarks[PoseLandmarkType.rightShoulder]!);
+
+    double leftHipAngle = findAngle(
+        pose.landmarks[PoseLandmarkType.leftKnee]!,
+        pose.landmarks[PoseLandmarkType.leftHip]!,
+        pose.landmarks[PoseLandmarkType.leftShoulder]!);
+
+    double avgHipAngle = (rightHipAngle + leftHipAngle) / 2;
+
+    // checking if hips are too high or too low
+    if (!kneePushupAngles.checkHipAngles(rightHipAngle, leftHipAngle)) {
+      hipErrorCounter ++;
+      // TODO - fix high hips error
+      if (hipErrorCounter > hipErrorLimit) {
+        hipErrorCounter = 0;
+        hipPosition = pose;
+        triggerFormCorrection(
+            "FEEDBACK - hips out of place (" + avgHipAngle.toString() + ")",
+            FormMistake.LOW_HIPS);
+      }
+    }
+  }
+
+  void checkLegs(Pose pose) {
+    double rightLegAngle = findAngle(
+        pose.landmarks[PoseLandmarkType.rightAnkle]!,
+        pose.landmarks[PoseLandmarkType.rightKnee]!,
+        pose.landmarks[PoseLandmarkType.rightHip]!);
+
+    double leftLegAngle = findAngle(
+        pose.landmarks[PoseLandmarkType.leftAnkle]!,
+        pose.landmarks[PoseLandmarkType.leftKnee]!,
+        pose.landmarks[PoseLandmarkType.leftHip]!);
+
+    double avgLegAngle = (rightLegAngle + leftLegAngle) / 2;
+    // _overlay[5] = _generalOverlay(Colors.deepPurple, avgLegAngle.toStringAsFixed(1), 40, 300);
+
+    int legError = kneePushupAngles.checkLegAngles(rightLegAngle, leftLegAngle);
+
+    switch (legError) {
+      case 1:
+        // if legs too high
+        legHighErrorCounter ++;
+        if (legHighErrorCounter > legErrorLimit) {
+          legHighErrorCounter = 0;
+          legPosition = pose;
+          triggerFormCorrection(
+              "FEEDBACK - legs too high (" + avgLegAngle.toString() + ")",
+              FormMistake.BENT_LEGS);
+        }
+      case 2:
+        // if legs too low
+        legLowErrorCounter ++;
+        if (legLowErrorCounter > legErrorLimit) {
+          legLowErrorCounter = 0;
+          legPosition = pose;
+          triggerFormCorrection(
+              "FEEDBACK - legs too low (" + avgLegAngle.toString() + ")",
+              FormMistake.BENT_LEGS);
+        }
+    }
+
+  }
+
+  void checkArms(Pose pose) {
+    double rightArmAngle = findAngle(
+        pose.landmarks[PoseLandmarkType.rightWrist]!,
+        pose.landmarks[PoseLandmarkType.rightElbow]!,
+        pose.landmarks[PoseLandmarkType.rightShoulder]!);
+
+    double leftArmAngle = findAngle(
+        pose.landmarks[PoseLandmarkType.leftWrist]!,
+        pose.landmarks[PoseLandmarkType.leftElbow]!,
+        pose.landmarks[PoseLandmarkType.leftShoulder]!);
+
+    double avgArmAngle = (rightArmAngle + leftArmAngle) / 2;
+
+    // when going down update the minimum arm angle reached & save pose
+    if (phase == ExercisePhase.DOWN) {
+      if (avgArmAngle < minArmAngle) {
+        minArmAngle = avgArmAngle;
+        bottomPosition = pose;
+      }
+    }
+
+    // when going up update the maximum arm angle reached & save pose
+    if (phase == ExercisePhase.UP) {
+      if (avgArmAngle > maxArmAngle) {
+        maxArmAngle = avgArmAngle;
+        topPosition = pose;
+      }
+    }
+
+    // if in TOP position
+    if (kneePushupAngles.checkStartArmAngles(rightArmAngle, leftArmAngle)) {
+
+      if(phase == ExercisePhase.UP){
+        // if we were in UP position, increment rep counter (i.e. one rep has been completed)
+        repCounter++;
+        _overlay[1] = _repCounter(repCounter.toString());
+      } else if (phase == ExercisePhase.DOWN && phaseCounter > phaseLimit) {
+        // if we were in DOWN position, never reached BOTTOM (i.e. didn't go low enough)
+        // provide feedback
+        triggerFormCorrection(
+            "FEEDBACK - did not go low enough (" + maxArmAngle.toString() + ")",
+            FormMistake.BOTTOM_ARMS);
+      }
+
+      phase = ExercisePhase.TOP;
+      minArmAngle = 181.0;
+    } else {
+      // if we were in the top position but now aren't then we are going DOWN
+      if (phase == ExercisePhase.TOP) {
+        phase = ExercisePhase.DOWN;
+      }
+    }
+
+    // if in BOTTOM position
+    if (kneePushupAngles.checkEndArmAngles(rightArmAngle, leftArmAngle)) {
+      // if we were going UP and then got to BOTTOM again - we did not go high enough
+      if (phase == ExercisePhase.UP && phaseCounter > phaseLimit) {
+        // provide feedback
+        triggerFormCorrection(
+            "FEEDBACK - did not go high enough (" + maxArmAngle.toString() + ")",
+            FormMistake.TOP_ARMS);
+      }
+
+      phase = ExercisePhase.BOTTOM;
+      maxArmAngle = -1.0;
+    } else {
+      // if we were in the bottom position but now aren't - then we are going UP
+      if (phase == ExercisePhase.BOTTOM) {
+        phase = ExercisePhase.UP;
+      }
+    }
+  }
+
+  double findAngle(PoseLandmark first, PoseLandmark mid, PoseLandmark last) {
+    double radians = atan2(last.y - mid.y, last.x - mid.x) -
+        atan2(first.y - mid.y, first.x - mid.x);
+
+    double degrees = (radians * 180.0 / pi).abs();
+
+    if (degrees > 180.0) {
+      degrees = 360.0 - degrees;
+    }
+
+    return degrees;
+  }
+
   void triggerFormCorrection(String debugText, FormMistake formMistake) {
     print(debugText);
     latestMistake = formMistake;
@@ -249,35 +382,26 @@ class _WorkoutViewState extends State<WorkoutView> {
       switch (formMistake) {
         case FormMistake.BOTTOM_ARMS:
           _overlay[0] = _textFeedback("Try and go lower next rep");
-          savedPose = generateFormCorrection(
-              exercise.bottomPosition, formMistake, widget.exerciseType);
+          savedPose = generateFormCorrection(bottomPosition, formMistake, exerciseType);
           AudioPlayer().play(AssetSource('audio/lowerArmsFormCorrection.mp3'));
         case FormMistake.TOP_ARMS:
           _overlay[0] = _textFeedback("Straighten arms at the top of each rep");
-          savedPose = generateFormCorrection(
-              exercise.topPosition, formMistake, widget.exerciseType);
+          savedPose = generateFormCorrection(topPosition, formMistake, exerciseType);
           AudioPlayer().play(AssetSource('audio/topArmsFormCorrection.mp3'));
         case FormMistake.HIGH_HIPS:
-        // TODO clean up - not in use
-        // _overlay[3] = _textFeedback("Try and lower your hips");
-        // savedPose = generateFormCorrection(hipPosition, formMistake);
-        // AudioPlayer().play(AssetSource('audio/highHipsFormCorrection.mp3'));
+          // TODO clean up - not in use
+          // _overlay[3] = _textFeedback("Try and lower your hips");
+          // savedPose = generateFormCorrection(hipPosition, formMistake);
+          // AudioPlayer().play(AssetSource('audio/highHipsFormCorrection.mp3'));
         case FormMistake.LOW_HIPS:
           _overlay[0] = _textFeedback("Straighten out your hips"); // old - Try bring your hips upwards
-          savedPose = generateFormCorrection(
-              exercise.hipPosition, formMistake, widget.exerciseType);
+          savedPose = generateFormCorrection(hipPosition, formMistake, exerciseType);
           // need new audio for hips
           AudioPlayer().play(AssetSource('audio/lowHipsFormCorrection.mp3'));
         case FormMistake.BENT_LEGS:
-          _overlay[0] = _textFeedback("Straighten out your legs");
-          savedPose = generateFormCorrection(
-              exercise.legPosition, formMistake, widget.exerciseType);
-          AudioPlayer().play(AssetSource('audio/bentLegsFormCorrection.mp3'));
-        case FormMistake.BEND_LEGS_LESS || FormMistake.BEND_LEGS_MORE:
-          _overlay[0] = _textFeedback("Bend knees to 90 degrees");
-          savedPose = generateFormCorrection(
-              exercise.legPosition, formMistake, widget.exerciseType);
-          AudioPlayer().play(AssetSource('audio/bentLegsFormCorrection.mp3'));
+          _overlay[0] = _textFeedback("Bend your legs to 90 degrees");
+          savedPose = generateFormCorrection(legPosition, formMistake, exerciseType);
+          AudioPlayer().play(AssetSource('audio/kneePushupFormCorrection.mp3'));
       }
 
       // trigger timer
@@ -305,9 +429,9 @@ class _WorkoutViewState extends State<WorkoutView> {
                 _text,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
                 ),
               ),
             )));
@@ -343,10 +467,10 @@ class _WorkoutViewState extends State<WorkoutView> {
                     "/$repGoal",
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        color: Colors.grey[200],
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                        letterSpacing: 1
+                      color: Colors.grey[200],
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      letterSpacing: 1
                     ),
                   ),
                 ],
@@ -378,3 +502,5 @@ class _WorkoutViewState extends State<WorkoutView> {
             )));
   }
 }
+
+ */

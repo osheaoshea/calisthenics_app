@@ -1,12 +1,14 @@
+
+/*
 import 'dart:math';
 
 import 'package:calisthenics_app/common/exercise_type.dart';
-import 'package:calisthenics_app/exercises/knee_pushup_angles.dart';
 import 'package:calisthenics_app/pages/camera_view.dart';
 import 'package:calisthenics_app/painters/pose_painter.dart';
 import 'package:calisthenics_app/utils/form_correction_generator.dart';
 import 'package:calisthenics_app/common/form_mistake.dart';
 import 'package:calisthenics_app/common/exercise_phase.dart';
+import 'package:calisthenics_app/exercises/pushup_angles.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
@@ -14,8 +16,8 @@ import 'package:audioplayers/audioplayers.dart';
 
 
 
-class KneePushupView extends StatefulWidget {
-  const KneePushupView({
+class PushupView extends StatefulWidget {
+  const PushupView({
     super.key,
     this.onCameraFeedReady,
     this.onCameraLensDirectionChanged,
@@ -25,13 +27,13 @@ class KneePushupView extends StatefulWidget {
   final Function(CameraLensDirection direction)? onCameraLensDirectionChanged;
 
   @override
-  State<KneePushupView> createState() => _KneePushupViewState();
+  State<PushupView> createState() => _PushupViewState();
 }
 
-class _KneePushupViewState extends State<KneePushupView> {
+class _PushupViewState extends State<PushupView> {
 
   final PoseDetector _poseDetector =
-      PoseDetector(options: PoseDetectorOptions());
+  PoseDetector(options: PoseDetectorOptions());
   bool _canProcess = true;
   bool _isBusy = false;
 
@@ -39,8 +41,8 @@ class _KneePushupViewState extends State<KneePushupView> {
 
   var _cameraLensDirection = CameraLensDirection.back;
 
-  final KneePushUpAngles kneePushupAngles = KneePushUpAngles();
-  final ExerciseType exerciseType = ExerciseType.KNEE_PUSHUP;
+  final PushupAngles pushUpAngles = PushupAngles();
+  final ExerciseType exerciseType = ExerciseType.PUSHUP;
 
   ExercisePhase phase = ExercisePhase.NA;
   ExercisePhase prevPhase = ExercisePhase.NA;
@@ -48,11 +50,9 @@ class _KneePushupViewState extends State<KneePushupView> {
   // used to delay form corrections
   int phaseCounter = 0; // track how long we have been in a given phase
   int phaseLimit = 3;
-  // TODO - these error counters don't reset if back in position
   int hipErrorCounter = 0;
   int hipErrorLimit = 6;
-  int legLowErrorCounter = 0;
-  int legHighErrorCounter = 0;
+  int legErrorCounter = 0;
   int legErrorLimit = 6;
 
   int repCounter = 0;
@@ -80,7 +80,7 @@ class _KneePushupViewState extends State<KneePushupView> {
   // plank variables
   bool inPlank = false;
   int inPlankCounter = -5;
-  int plankErrorLimit = 10;
+  int plankErrorLimit = 5;
   double flatGrad = 0.8;
 
 
@@ -230,7 +230,7 @@ class _KneePushupViewState extends State<KneePushupView> {
     double avgHipAngle = (rightHipAngle + leftHipAngle) / 2;
 
     // checking if hips are too high or too low
-    if (!kneePushupAngles.checkHipAngles(rightHipAngle, leftHipAngle)) {
+    if (!pushUpAngles.checkHipAngles(rightHipAngle, leftHipAngle)) {
       hipErrorCounter ++;
       // TODO - fix high hips error
       if (hipErrorCounter > hipErrorLimit) {
@@ -255,33 +255,17 @@ class _KneePushupViewState extends State<KneePushupView> {
         pose.landmarks[PoseLandmarkType.leftHip]!);
 
     double avgLegAngle = (rightLegAngle + leftLegAngle) / 2;
-    // _overlay[5] = _generalOverlay(Colors.deepPurple, avgLegAngle.toStringAsFixed(1), 40, 300);
 
-    int legError = kneePushupAngles.checkLegAngles(rightLegAngle, leftLegAngle);
-
-    switch (legError) {
-      case 1:
-        // if legs too high
-        legHighErrorCounter ++;
-        if (legHighErrorCounter > legErrorLimit) {
-          legHighErrorCounter = 0;
-          legPosition = pose;
-          triggerFormCorrection(
-              "FEEDBACK - legs too high (" + avgLegAngle.toString() + ")",
-              FormMistake.BENT_LEGS);
-        }
-      case 2:
-        // if legs too low
-        legLowErrorCounter ++;
-        if (legLowErrorCounter > legErrorLimit) {
-          legLowErrorCounter = 0;
-          legPosition = pose;
-          triggerFormCorrection(
-              "FEEDBACK - legs too low (" + avgLegAngle.toString() + ")",
-              FormMistake.BENT_LEGS);
-        }
+    if(!pushUpAngles.checkLegAngles(rightLegAngle, leftLegAngle)) {
+      legErrorCounter ++;
+      if (legErrorCounter > legErrorLimit) {
+        legErrorCounter = 0;
+        legPosition = pose;
+        triggerFormCorrection(
+            "FEEDBACK - legs not straight (" + avgLegAngle.toString() + ")",
+            FormMistake.BENT_LEGS);
+      }
     }
-
   }
 
   void checkArms(Pose pose) {
@@ -314,7 +298,7 @@ class _KneePushupViewState extends State<KneePushupView> {
     }
 
     // if in TOP position
-    if (kneePushupAngles.checkStartArmAngles(rightArmAngle, leftArmAngle)) {
+    if (pushUpAngles.checkStartArmAngles(rightArmAngle, leftArmAngle)) {
 
       if(phase == ExercisePhase.UP){
         // if we were in UP position, increment rep counter (i.e. one rep has been completed)
@@ -338,7 +322,7 @@ class _KneePushupViewState extends State<KneePushupView> {
     }
 
     // if in BOTTOM position
-    if (kneePushupAngles.checkEndArmAngles(rightArmAngle, leftArmAngle)) {
+    if (pushUpAngles.checkEndArmAngles(rightArmAngle, leftArmAngle)) {
       // if we were going UP and then got to BOTTOM again - we did not go high enough
       if (phase == ExercisePhase.UP && phaseCounter > phaseLimit) {
         // provide feedback
@@ -388,19 +372,19 @@ class _KneePushupViewState extends State<KneePushupView> {
           savedPose = generateFormCorrection(topPosition, formMistake, exerciseType);
           AudioPlayer().play(AssetSource('audio/topArmsFormCorrection.mp3'));
         case FormMistake.HIGH_HIPS:
-          // TODO clean up - not in use
-          // _overlay[3] = _textFeedback("Try and lower your hips");
-          // savedPose = generateFormCorrection(hipPosition, formMistake);
-          // AudioPlayer().play(AssetSource('audio/highHipsFormCorrection.mp3'));
+        // TODO clean up - not in use
+        // _overlay[3] = _textFeedback("Try and lower your hips");
+        // savedPose = generateFormCorrection(hipPosition, formMistake);
+        // AudioPlayer().play(AssetSource('audio/highHipsFormCorrection.mp3'));
         case FormMistake.LOW_HIPS:
           _overlay[0] = _textFeedback("Straighten out your hips"); // old - Try bring your hips upwards
           savedPose = generateFormCorrection(hipPosition, formMistake, exerciseType);
           // need new audio for hips
           AudioPlayer().play(AssetSource('audio/lowHipsFormCorrection.mp3'));
         case FormMistake.BENT_LEGS:
-          _overlay[0] = _textFeedback("Bend your legs to 90 degrees");
+          _overlay[0] = _textFeedback("Straighten out your legs");
           savedPose = generateFormCorrection(legPosition, formMistake, exerciseType);
-          AudioPlayer().play(AssetSource('audio/kneePushupFormCorrection.mp3'));
+          AudioPlayer().play(AssetSource('audio/bentLegsFormCorrection.mp3'));
       }
 
       // trigger timer
@@ -428,9 +412,9 @@ class _KneePushupViewState extends State<KneePushupView> {
                 _text,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 11,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
                 ),
               ),
             )));
@@ -466,10 +450,10 @@ class _KneePushupViewState extends State<KneePushupView> {
                     "/$repGoal",
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.grey[200],
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      letterSpacing: 1
+                        color: Colors.grey[200],
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        letterSpacing: 1
                     ),
                   ),
                 ],
@@ -501,3 +485,5 @@ class _KneePushupViewState extends State<KneePushupView> {
             )));
   }
 }
+
+ */

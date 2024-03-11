@@ -3,5 +3,7 @@ enum FormMistake {
   TOP_ARMS,
   HIGH_HIPS,
   LOW_HIPS,
-  BENT_LEGS
+  BENT_LEGS,
+  BEND_LEGS_MORE,
+  BEND_LEGS_LESS
 }

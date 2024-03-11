@@ -28,7 +28,7 @@ class _ExerciseSelectViewState extends State<ExerciseSelectView> {
                   height: 20,
                 ),
                 _exerciseButton('KNEE PUSHUP', '/knee-pushup', 10),
-                _exerciseButton('PUSHUP', '/workout', 6),
+                _exerciseButton('PUSHUP', '/pushup', 6),
                 _exerciseButton('ONE-ARM PUSHUP', '', 3)
               ],
             ),
