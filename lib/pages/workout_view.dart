@@ -6,6 +6,7 @@ import 'package:calisthenics_app/pages/camera_view.dart';
 import 'package:calisthenics_app/painters/pose_painter.dart';
 import 'package:calisthenics_app/utils/form_correction_generator.dart';
 import 'package:calisthenics_app/common/form_mistake.dart';
+import 'package:calisthenics_app/utils/workout_stat_tracker.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
@@ -43,12 +44,14 @@ class _WorkoutViewState extends State<WorkoutView> {
   var _cameraLensDirection = CameraLensDirection.back;
 
   late BaseExercise exercise;
-  bool debug_check = false;
 
   // TODO - move repGoal to some config
   int repGoal = 50;
 
   bool workoutComplete = false;
+
+  // Stat Tracker
+  late StatTracker statTracker;
 
   // [0-text feedback] [1-rep counter] [2-timer] [3-end workout] [4-plank position] [5-debug]
   List<Widget?> _overlay = [Container(), Container(), Container(),
@@ -77,6 +80,8 @@ class _WorkoutViewState extends State<WorkoutView> {
         exercise = KneePushup(repGoal);
     }
 
+    statTracker = StatTracker(repGoal, widget.exerciseType);
+
     _overlay[1] = _repCounter(exercise.repCounter.reps.toString());
     super.initState();
   }
@@ -98,6 +103,7 @@ class _WorkoutViewState extends State<WorkoutView> {
       onCameraFeedReady: widget.onCameraFeedReady,
       initialCameraLensDirection: _cameraLensDirection,
       onCameraLensDirectionChanged: (value) => _cameraLensDirection = value,
+      statTracker: statTracker,
     );
   }
 
@@ -164,6 +170,7 @@ class _WorkoutViewState extends State<WorkoutView> {
           switch (armCheckReturn) {
             case ArmCheckReturn.UPDATE_REP:
               _overlay[1] = _repCounter(exercise.repCounter.reps.toString());
+              statTracker.completedReps = exercise.repCounter.reps;
             case ArmCheckReturn.FC_BOTTOM_ARMS:
             // trigger form correction
               triggerFormCorrection("FEEDBACK - did not go low enough",
@@ -241,6 +248,7 @@ class _WorkoutViewState extends State<WorkoutView> {
   void triggerFormCorrection(String debugText, FormMistake formMistake) {
     print(debugText);
     latestMistake = formMistake;
+    statTracker.increment(formMistake);
 
     // if not already showing a form correction
     if (!showFormCorrection) {

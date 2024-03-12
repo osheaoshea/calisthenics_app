@@ -20,13 +20,33 @@ class PercentageRing extends StatelessWidget {
           painter: RingPainter(percentage: percentage),
         ),
         Center(
-          child: Text(
-            '${(percentage * 100).toInt()}%',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: Colors.black, // Adjust the color as needed
-            ),
+          child: Column(
+            children: [
+              Text(
+                '${(percentage * 100).toInt()}%',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.black, // Adjust the color as needed
+                ),
+              ),
+              Text(
+                'reps',
+                style: TextStyle(
+                  // fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                  color: Colors.black, // Adjust the color as needed
+                ),
+              ),
+              Text(
+                'completed',
+                style: TextStyle(
+                  // fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                  color: Colors.black, // Adjust the color as needed
+                ),
+              ),
+            ],
           ),
         ),
       ],

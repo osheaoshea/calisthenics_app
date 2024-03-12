@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:calisthenics_app/utils/workout_stat_tracker.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,7 +16,8 @@ class CameraView extends StatefulWidget {
       this.onCameraFeedReady,
       this.onCameraLensDirectionChanged,
       this.initialCameraLensDirection = CameraLensDirection.back,
-      required this.workoutComplete})
+      required this.workoutComplete,
+      required this.statTracker})
       : super(key: key);
 
   final CustomPaint? customPaint;
@@ -25,6 +27,7 @@ class CameraView extends StatefulWidget {
   final Function(CameraLensDirection direction)? onCameraLensDirectionChanged;
   final CameraLensDirection initialCameraLensDirection;
   final bool workoutComplete;
+  final StatTracker statTracker;
 
   @override
   State<CameraView> createState() => _CameraViewState();
@@ -40,6 +43,7 @@ class _CameraViewState extends State<CameraView> {
   Stopwatch stopwatch = Stopwatch();
 
   bool oneTimeRedirectFlag = false;
+  bool terminateWorkout = false;
 
   @override
   void initState() {
@@ -48,8 +52,8 @@ class _CameraViewState extends State<CameraView> {
     stopwatch.start();
 
     // end workout after given time
-    Timer(Duration(minutes: 10), (){
-      Navigator.of(context).pushReplacementNamed('/workout-complete');
+    Timer(Duration(minutes: 5), (){
+      terminateWorkout = true;
     });
   }
 
@@ -81,12 +85,18 @@ class _CameraViewState extends State<CameraView> {
   Widget build(BuildContext context) {
 
     // check if workout is complete, if so redirect
-    if(widget.workoutComplete && !oneTimeRedirectFlag){
+    if((widget.workoutComplete && !oneTimeRedirectFlag) ||
+        (terminateWorkout && !oneTimeRedirectFlag)){
+
       oneTimeRedirectFlag = true;
+      widget.statTracker.completionTime = _getStopWatchTime();
+      widget.statTracker.setCompletionDate();
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.pushReplacementNamed(
           context,
           '/workout-complete',
+          arguments: widget.statTracker
           // add arguments - https://docs.flutter.dev/cookbook/navigation/navigate-with-arguments#:~:text=You%20can%20accomplish%20this%20task,the%20MaterialApp%20or%20CupertinoApp%20constructor.
         );
       });
