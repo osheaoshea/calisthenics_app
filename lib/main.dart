@@ -1,7 +1,7 @@
 import 'package:calisthenics_app/pages/exercise_select_view.dart';
 import 'package:calisthenics_app/pages/home.dart';
-import 'package:calisthenics_app/pages/pose_setup_view.dart';
 import 'package:calisthenics_app/pages/workout_complete_view.dart';
+import 'package:calisthenics_app/pages/workout_setup_view.dart';
 import 'package:calisthenics_app/pages/workout_view.dart';
 import 'package:flutter/material.dart';
 
@@ -13,7 +13,7 @@ void main() {
     routes: {
       '/home': (context) => Home(),
       // '/set-up': (context) => PoseSetupView(),
-      // '/pose-set-up': (context) => PoseSetupView(),
+      // '/workout-setup': (context) => WorkoutSetupView(),
       '/exercise-select': (context) => ExerciseSelectView(),
       '/pushup': (context) => WorkoutView(exerciseType: ExerciseType.PUSHUP),
       '/knee-pushup': (context) => WorkoutView(exerciseType: ExerciseType.KNEE_PUSHUP),

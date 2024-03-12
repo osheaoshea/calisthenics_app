@@ -1,3 +1,4 @@
+import 'package:calisthenics_app/pages/workout_setup_view.dart';
 import 'package:flutter/material.dart';
 
 
@@ -46,7 +47,10 @@ class _ExerciseSelectViewState extends State<ExerciseSelectView> {
         child: ElevatedButton(
           onPressed: () {
             if(_route != ''){
-              Navigator.pushNamed(context, _route);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => WorkoutSetupView(nextPageRoute: _route)),
+              );
             }
           },
           style: ElevatedButton.styleFrom(
