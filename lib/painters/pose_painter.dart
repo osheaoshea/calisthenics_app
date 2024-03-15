@@ -66,7 +66,8 @@ class PosePainter extends CustomPainter {
           paintPose(savedPose, canvas, size,
               whitePaint, whitePaint, whitePaint, whitePaint,
               greenPaint);
-        } else { //if (mistake == FormMistake.BENT_LEGS)
+        } else if (mistake == FormMistake.BENT_LEGS || mistake == FormMistake.BEND_LEGS_MORE
+            || mistake == FormMistake.BEND_LEGS_LESS) {
           paintPose(savedPose, canvas, size,
               whitePaint, whitePaint, greenPaint, greenPaint,
               whitePaint);

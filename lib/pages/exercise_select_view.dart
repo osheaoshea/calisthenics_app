@@ -1,5 +1,6 @@
 import 'package:calisthenics_app/pages/workout_setup_view.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 
 class ExerciseSelectView extends StatefulWidget {
@@ -11,6 +12,15 @@ class ExerciseSelectView extends StatefulWidget {
 
 class _ExerciseSelectViewState extends State<ExerciseSelectView> {
 
+  @override
+  void initState() {
+    // lock orientation
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {

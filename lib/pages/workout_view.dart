@@ -9,6 +9,7 @@ import 'package:calisthenics_app/common/form_mistake.dart';
 import 'package:calisthenics_app/utils/workout_stat_tracker.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:audioplayers/audioplayers.dart';
 
@@ -41,12 +42,12 @@ class _WorkoutViewState extends State<WorkoutView> {
 
   CustomPaint? _customPaint;
 
-  var _cameraLensDirection = CameraLensDirection.back;
+  var _cameraLensDirection = CameraLensDirection.front;
 
   late BaseExercise exercise;
 
   // TODO - move repGoal to some config
-  int repGoal = 50;
+  int repGoal = 10;
 
   bool workoutComplete = false;
 
@@ -58,8 +59,8 @@ class _WorkoutViewState extends State<WorkoutView> {
     Container(), Container(), Container()];
 
   // form correction variables
-  bool showFormCorrection = false;
-  FormMistake latestMistake = FormMistake.BENT_LEGS; // doesn't matter what it is initialised to
+  bool showingFormCorrection = false;
+  FormMistake latestMistake = FormMistake.NONE;
   Pose savedPose = Pose(landmarks: {});
 
   // TODO - sort plank functionality when adding in 'exercise setup pages' etc
@@ -69,9 +70,22 @@ class _WorkoutViewState extends State<WorkoutView> {
   int plankErrorLimit = 5;
   double flatGrad = 0.8;
 
+  // setup variables
+  double setupComplete = 0.0;
+  bool workoutStarted = false;
+  bool oneTimeSetupFlag = false;
+
 
   @override
   void initState() {
+    // unlock orientation
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+
     // load exercise
     switch(widget.exerciseType) {
       case ExerciseType.PUSHUP:
@@ -88,6 +102,11 @@ class _WorkoutViewState extends State<WorkoutView> {
 
   @override
   void dispose() {
+    // lock orientation
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
     _canProcess = false;
     _poseDetector.close();
     super.dispose();
@@ -104,6 +123,7 @@ class _WorkoutViewState extends State<WorkoutView> {
       initialCameraLensDirection: _cameraLensDirection,
       onCameraLensDirectionChanged: (value) => _cameraLensDirection = value,
       statTracker: statTracker,
+      setupComplete: setupComplete,
     );
   }
 
@@ -124,17 +144,22 @@ class _WorkoutViewState extends State<WorkoutView> {
 
       final painter = PosePainter(poses, inputImage.metadata!.size,
           inputImage.metadata!.rotation, _cameraLensDirection,
-          savedPose, showFormCorrection, latestMistake);
+          savedPose, showingFormCorrection, latestMistake);
 
       // update phase counter
       exercise.phaseTracker.updatePhaseCounter();
 
       for (Pose pose in poses) {
 
-        // TODO - move these checks to separate class
-        // TODO - (might have a base class that is overridden by specific exercises)
+        if(!workoutStarted) {
+          updateWorkoutSetup(pose);
+        }
+
         /** check in pushup plank position **/
-        bool skipChecks = !checkPlank(pose);
+        bool skipChecks = true;
+        if(workoutStarted) {
+          skipChecks = !checkPlank(pose);
+        }
 
         // if not in plank position, skip the rest of the checks
         if (!skipChecks) {
@@ -171,6 +196,7 @@ class _WorkoutViewState extends State<WorkoutView> {
             case ArmCheckReturn.UPDATE_REP:
               _overlay[1] = _repCounter(exercise.repCounter.reps.toString());
               statTracker.completedReps = exercise.repCounter.reps;
+              AudioPlayer().play(AssetSource('audio/rep-count.mp3'));
             case ArmCheckReturn.FC_BOTTOM_ARMS:
             // trigger form correction
               triggerFormCorrection("FEEDBACK - did not go low enough",
@@ -195,6 +221,29 @@ class _WorkoutViewState extends State<WorkoutView> {
     _isBusy = false;
     if (mounted) {
       setState(() {});
+    }
+  }
+
+  void updateWorkoutSetup(Pose pose) {
+    if (inPlankPosition(pose)){
+      setupComplete += 0.08; // 0.05 -> 0.08
+    } else {
+      setupComplete -= 0.07; // 0.05 -> 0.07
+      if (setupComplete < 0) {
+        setupComplete = 0;
+      }
+    }
+
+    if (setupComplete >= 1 && !oneTimeSetupFlag) {
+      oneTimeSetupFlag = true;
+
+      // play ding sound and tell user they the workout has started
+      AudioPlayer().play(AssetSource('audio/workout-begun.mp3'));
+
+      // trigger timer
+      Future.delayed(const Duration(seconds: 2), () {
+        workoutStarted = true;
+      });
     }
   }
 
@@ -244,15 +293,14 @@ class _WorkoutViewState extends State<WorkoutView> {
     }
   }
 
-  // TODO - move to separate class (NOT SURE HOW TO DO YET)
   void triggerFormCorrection(String debugText, FormMistake formMistake) {
     print(debugText);
-    latestMistake = formMistake;
-    statTracker.increment(formMistake);
 
     // if not already showing a form correction
-    if (!showFormCorrection) {
-      showFormCorrection = true;
+    if (!showingFormCorrection) {
+      latestMistake = formMistake;
+      statTracker.increment(formMistake);
+      showingFormCorrection = true;
 
       switch (formMistake) {
         case FormMistake.BOTTOM_ARMS:
@@ -285,12 +333,14 @@ class _WorkoutViewState extends State<WorkoutView> {
           _overlay[0] = _textFeedback("Bend knees to 90 degrees");
           savedPose = generateFormCorrection(
               exercise.legPosition, formMistake, widget.exerciseType);
-          AudioPlayer().play(AssetSource('audio/bentLegsFormCorrection.mp3'));
+          AudioPlayer().play(AssetSource('audio/kneePushupFormCorrection.mp3'));
+        case FormMistake.NONE:
+          // do nothing
       }
 
       // trigger timer
       Future.delayed(const Duration(seconds: 3), () {
-        showFormCorrection = false;
+        showingFormCorrection = false;
         _overlay[0] = Container();
       });
     }

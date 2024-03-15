@@ -39,6 +39,8 @@ Pose generateFormCorrection(Pose pose, FormMistake formMistake, ExerciseType exe
     case FormMistake.BEND_LEGS_MORE || FormMistake.BEND_LEGS_LESS:
       correction = Map.from(FCPoses.bentLegs);
       invert ? invertAngles(correction) : null;
+    case FormMistake.NONE:
+      return pose;
   }
 
   // LEFT

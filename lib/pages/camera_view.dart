@@ -17,7 +17,8 @@ class CameraView extends StatefulWidget {
       this.onCameraLensDirectionChanged,
       this.initialCameraLensDirection = CameraLensDirection.back,
       required this.workoutComplete,
-      required this.statTracker})
+      required this.statTracker,
+      required this.setupComplete})
       : super(key: key);
 
   final CustomPaint? customPaint;
@@ -28,6 +29,7 @@ class CameraView extends StatefulWidget {
   final CameraLensDirection initialCameraLensDirection;
   final bool workoutComplete;
   final StatTracker statTracker;
+  final double setupComplete;
 
   @override
   State<CameraView> createState() => _CameraViewState();
@@ -45,16 +47,12 @@ class _CameraViewState extends State<CameraView> {
   bool oneTimeRedirectFlag = false;
   bool terminateWorkout = false;
 
+  bool workoutStarted = false;
+
   @override
   void initState() {
     super.initState();
     _initialize();
-    stopwatch.start();
-
-    // end workout after given time
-    Timer(Duration(minutes: 5), (){
-      terminateWorkout = true;
-    });
   }
 
   void _initialize() async {
@@ -83,28 +81,38 @@ class _CameraViewState extends State<CameraView> {
 
   @override
   Widget build(BuildContext context) {
-
     // check if workout is complete, if so redirect
-    if((widget.workoutComplete && !oneTimeRedirectFlag) ||
-        (terminateWorkout && !oneTimeRedirectFlag)){
-
+    if ((widget.workoutComplete && !oneTimeRedirectFlag) ||
+        (terminateWorkout && !oneTimeRedirectFlag)) {
       oneTimeRedirectFlag = true;
       widget.statTracker.completionTime = _getStopWatchTime();
       widget.statTracker.setCompletionDate();
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacementNamed(
-          context,
-          '/workout-complete',
-          arguments: widget.statTracker
-          // add arguments - https://docs.flutter.dev/cookbook/navigation/navigate-with-arguments#:~:text=You%20can%20accomplish%20this%20task,the%20MaterialApp%20or%20CupertinoApp%20constructor.
-        );
+        Navigator.pushReplacementNamed(context, '/workout-complete',
+            arguments: widget.statTracker
+            // add arguments - https://docs.flutter.dev/cookbook/navigation/navigate-with-arguments#:~:text=You%20can%20accomplish%20this%20task,the%20MaterialApp%20or%20CupertinoApp%20constructor.
+            );
       });
+    }
+
+    if (widget.setupComplete >= 1.0 && !workoutStarted) {
+      workoutStarted = true;
+      _startWorkout();
     }
 
     return Scaffold(
       body: _liveFeedBody(),
     );
+  }
+
+  void _startWorkout() {
+    stopwatch.start();
+
+    // end workout after given time
+    Timer(const Duration(minutes: 5), () {
+      terminateWorkout = true;
+    });
   }
 
   Widget _liveFeedBody() {
@@ -126,11 +134,28 @@ class _CameraViewState extends State<CameraView> {
                     child: widget.customPaint,
                   ),
           ),
+          !workoutStarted ? _setupBorder() : Container(),
           _backButton(),
           _switchLiveCameraToggle(),
-          _stopWatch(),
-          for (Widget? w in widget.overlay) w ?? Container()
+          for (Widget? w in widget.overlay) w ?? Container(), // rep counter & form corrections
+          workoutStarted ? _stopWatch() : Container(),
         ],
+      ),
+    );
+  }
+
+  Widget _setupBorder() {
+    final screenSize = MediaQuery.of(context).size;
+
+    return Container(
+      width: screenSize.width, // Use the full screen width
+      height: screenSize.height, // Use the full screen height
+      decoration: BoxDecoration(
+        // This line creates the border around the entire screen.
+        border: Border.all(
+          color: widget.setupComplete == 0 ? Colors.red : Colors.green,
+          width: widget.setupComplete == 0 ? 20 : widget.setupComplete * 20,
+        ),
       ),
     );
   }
@@ -194,19 +219,20 @@ class _CameraViewState extends State<CameraView> {
           child: FloatingActionButton(
             heroTag: Object(),
             onPressed: _switchLiveCamera,
-            backgroundColor: Colors.black54,
+            backgroundColor: Colors.transparent,
             child: Icon(
               Platform.isIOS
                   ? Icons.flip_camera_ios_outlined
                   : Icons.flip_camera_android_outlined,
               size: 25,
+              color: Colors.white,
             ),
           ),
         ),
       );
 
   String _getStopWatchTime() {
-    if(stopwatch.isRunning){
+    if (stopwatch.isRunning) {
       var milli = stopwatch.elapsed.inMilliseconds;
 
       String milliseconds = ((milli % 1000) ~/ 10).toString().padLeft(2, "0");
@@ -218,7 +244,6 @@ class _CameraViewState extends State<CameraView> {
       return '';
     }
   }
-
 
   Future _startLiveFeed() async {
     final camera = _cameras[_cameraIndex];
@@ -257,7 +282,7 @@ class _CameraViewState extends State<CameraView> {
 
   Future _switchLiveCamera() async {
     setState(() => _changingCameraLens = true);
-    _cameraIndex = (_cameraIndex + 1) % _cameras.length;
+    _cameraIndex = (_cameraIndex + 1) % 2;//_cameras.length;
 
     await _stopLiveFeed();
     await _startLiveFeed();

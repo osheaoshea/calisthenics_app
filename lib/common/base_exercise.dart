@@ -15,7 +15,7 @@ class BaseExercise {
   late RepCounter repCounter;
 
   // limits for delaying feedback
-  int phaseLimit = 3;
+  int phaseLimit = 5; // 3 -> 5
   int hipErrorCounter = 0;
   int hipErrorLimit = 6;
   int legErrorCounter = 0;
@@ -31,7 +31,7 @@ class BaseExercise {
 
   // form angle variables
   double maxArmAngle = -1.0;
-  double minArmAngle = 181.0;
+  double minArmAngle = 361.0; //181.0;
 
   BaseExercise(int repGoal) {
     phaseTracker = PhaseTracker(phaseLimit);

@@ -1,7 +1,9 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:calisthenics_app/common/exercise_type.dart';
 import 'package:calisthenics_app/common/form_mistake.dart';
 import 'package:calisthenics_app/utils/workout_stat_tracker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../painters/ring_painter.dart';
 
@@ -52,8 +54,21 @@ class _WorkoutCompleteViewState extends State<WorkoutCompleteView> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  void initState() {
+    // lock orientation
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
 
+    // play workout complete message
+    AudioPlayer().play(AssetSource('audio/workout-complete-message.mp3'));
+
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     stats = ModalRoute.of(context)!.settings.arguments as StatTracker;
     _populateItems(stats);
 

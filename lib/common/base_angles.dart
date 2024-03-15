@@ -1,8 +1,8 @@
 // base class for exercise angles (defaults to pushup angles)
 
 abstract class BaseAngles {
-  final double startArmAngleMax = 181.0;
-  final double startArmAngleMin = 155.0;//180;//
+  final double startArmAngleMax = 361.0;// old - 181.0;
+  final double startArmAngleMin = 150.0;//180;//
   final double endArmAngleMax = 95.0;//30;//
   final double endArmAngleMin = 10;
   final double hipAngleMax = 190;

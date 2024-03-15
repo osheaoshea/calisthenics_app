@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 // TODO possibly block screen rotation for this page.
 
@@ -32,8 +33,9 @@ class _WorkoutSetupViewState extends State<WorkoutSetupView> {
               SizedBox(height: 20),
               for (var point in [
                 'Place your phone on the floor, leaning against a suitable vertical surface.',
-                'Get into workout position 2m away.',
-                'Make sure your body is perpendicular to the phone.'
+                'Get into workout position 2-3m away.',
+                'Make sure your body is perpendicular to the phone.',
+                'The app will inform you when the workout has begun.'
               ])
                 Padding(
                   padding: const EdgeInsets.fromLTRB(45, 0, 45, 8.0), // Space between bullet points
@@ -55,7 +57,7 @@ class _WorkoutSetupViewState extends State<WorkoutSetupView> {
               const SizedBox(height: 20), // Provides spacing between the bullet points and the button
               ElevatedButton(
                 onPressed: () {
-                  Navigator.pushNamed(context, widget.nextPageRoute);
+                  Navigator.pushReplacementNamed(context, widget.nextPageRoute);
                 },
                 child: Text('Get into Position'),
               ),
