@@ -322,61 +322,6 @@ class _ExerciseSelectViewState extends State<ExerciseSelectView> {
     );
   }
 
-  Widget _exerciseButtonOLD(String _text, WorkoutMetadata _metadata, int _reps) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 10, 0, 10),
-      child: SizedBox(
-        height: 70,
-        child: ElevatedButton(
-          onPressed: () {
-            if(_metadata.id != ''){
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => WorkoutSetupView(
-                  workoutMetadata: _metadata
-                ))
-              );
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12), // <-- Radius
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(_text, style: TextStyle(
-                  color: Colors.grey[800],
-                  fontSize: 15
-              ),),
-              SizedBox(
-                width: 70,
-                height: 40,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    LinearProgressIndicator(
-                      backgroundColor: Colors.grey[300], // Background color of the progress bar
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        _getColorFromDecimal(_reps/10)
-                      ), // Fill color
-                      value: _reps / 10, // Set the progress value between 0.0 and 1.0
-                    ),
-                    Text("$_reps/10", style: TextStyle(
-                      color: Colors.grey[800],
-                      fontSize: 12
-                    ),)
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Color _getColorFromDecimal(double decimal) {
     // Ensure the decimal is within the valid range [0, 1]
     decimal = decimal.clamp(0.0, 1.0);

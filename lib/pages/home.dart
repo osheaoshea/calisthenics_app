@@ -1,11 +1,4 @@
-import 'package:calisthenics_app/common/exercise_type.dart';
-import 'package:calisthenics_app/common/form_mistake.dart';
-import 'package:calisthenics_app/utils/workout_stat_tracker.dart';
 import 'package:flutter/material.dart';
-
-import '../widgets/card_list.dart';
-
-/// USED FOR DEBUGGING
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -16,50 +9,73 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
 
-  StatTracker statTracker = StatTracker(10, ExerciseType.PUSHUP);
-  bool oneTimeRedirectFlag = false;
-
-  _updateStats() {
-    statTracker.mistakeCounter[FormMistake.HIGH_HIPS] = 10;
-    statTracker.mistakeCounter[FormMistake.TOP_ARMS] = 19;
-    statTracker.mistakeCounter[FormMistake.BOTTOM_ARMS] = 21;
-    // statTracker.mistakeCounter[FormMistake.BENT_LEGS] = 14;
-
-    statTracker.completedReps = 8;
-
-    statTracker.setCompletionDate();
-  }
-
   @override
   Widget build(BuildContext context) {
 
-    _updateStats();
-
-    if(!oneTimeRedirectFlag) {
-      oneTimeRedirectFlag = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacementNamed(
-            context,
-            '/workout-complete',
-            arguments: statTracker
-          // add arguments - https://docs.flutter.dev/cookbook/navigation/navigate-with-arguments#:~:text=You%20can%20accomplish%20this%20task,the%20MaterialApp%20or%20CupertinoApp%20constructor.
-        );
-      });
-    }
-
     return Scaffold(
       appBar: AppBar(
-        title: Text('Home Page'),
+        title: Text('CaliCorrect',
+          style: TextStyle(
+            fontSize: 30,
+            // fontWeight: FontWeight.bold,
+          ),
+        ),
         centerTitle: true,
       ),
-      // body: SafeArea(
-      //   child: Center(
-      //     child: FractionallySizedBox(
-      //       widthFactor: 0.8,
-      //         child: CardList(numbers: [1, 2, 9],)
-      //     )
-      //   )
-      // ),
+      body: SafeArea(
+        child: Center(
+          child: FractionallySizedBox(
+            widthFactor: 0.8,
+              child: Column(
+                children: [
+                  const SizedBox(height: 20,),
+                  Text('Welcome to CaliCorrect - a computer vision mobile app to '
+                      'help you ascent through the calisthenic levels!',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 40,),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/exercise-select');
+                    },
+                    icon: Icon(Icons.fitness_center, color: Colors.grey[800],),
+                    label: Text('Select Workout', style: TextStyle(color: Colors.grey[800]),),
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(horizontal: 50, vertical: 20),
+                      textStyle: TextStyle(
+                        fontSize: 20,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12), // <-- Radius
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20,),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/exercise-select');
+                    },
+                    icon: Icon(Icons.question_mark, color: Colors.grey[800],),
+                    label: Text('Workout Tutorials', style: TextStyle(color: Colors.grey[800]),),
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                      textStyle: TextStyle(
+                        fontSize: 20,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12), // <-- Radius
+                      ),
+                    ),
+                  ),
+                ],
+              )
+          )
+        )
+      ),
     );
   }
 }

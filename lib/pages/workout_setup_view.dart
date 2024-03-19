@@ -66,7 +66,12 @@ class _WorkoutSetupViewState extends State<WorkoutSetupView> {
                       ))
                   );
                 },
-                child: Text('Get into Position'),
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12), // <-- Radius
+                  ),
+                ),
+                child: Text('Get into Position', style: TextStyle(color: Colors.grey[800]),),
               ),
             ],
           ),
