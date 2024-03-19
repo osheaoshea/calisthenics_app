@@ -15,9 +15,9 @@ void main() {
       // '/set-up': (context) => PoseSetupView(),
       // '/workout-setup': (context) => WorkoutSetupView(),
       '/exercise-select': (context) => ExerciseSelectView(),
-      '/pushup': (context) => WorkoutView(exerciseType: ExerciseType.PUSHUP),
-      '/knee-pushup': (context) => WorkoutView(exerciseType: ExerciseType.KNEE_PUSHUP),
-      '/workout-complete': (context) => WorkoutCompleteView()
+      // '/pushup': (context) => WorkoutView(exerciseType: ExerciseType.PUSHUP),
+      // '/knee-pushup': (context) => WorkoutView(exerciseType: ExerciseType.KNEE_PUSHUP),
+      // '/workout-complete': (context) => WorkoutCompleteView()
     },
     debugShowCheckedModeBanner: false,
   ));

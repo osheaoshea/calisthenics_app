@@ -1,15 +1,25 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:calisthenics_app/common/exercise_type.dart';
 import 'package:calisthenics_app/common/form_mistake.dart';
+import 'package:calisthenics_app/common/workout_metadata.dart';
 import 'package:calisthenics_app/utils/workout_stat_tracker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../painters/ring_painter.dart';
+import '../utils/shared_preferences_notifier.dart';
 
 
 class WorkoutCompleteView extends StatefulWidget {
-  const WorkoutCompleteView({super.key});
+  const WorkoutCompleteView({
+    super.key,
+    required this.workoutMetadata,
+    required this.statTracker
+  });
+
+  final WorkoutMetadata workoutMetadata;
+  final StatTracker statTracker;
 
   @override
   State<WorkoutCompleteView> createState() => _WorkoutCompleteViewState();
@@ -19,9 +29,11 @@ class _WorkoutCompleteViewState extends State<WorkoutCompleteView> {
 
   late List<Map<String, dynamic>> _FCitems;
   bool perfectWorkout = false;
-  late StatTracker stats;
+  // late StatTracker stats;
 
-  _populateItems(StatTracker stats) {
+  bool oneTimeUpdateFlag = false;
+
+  void _populateItems(StatTracker stats) {
     _FCitems = [
       {"title": "Hips out of place", "number": (stats.mistakeCounter[FormMistake.LOW_HIPS]!
           + stats.mistakeCounter[FormMistake.HIGH_HIPS]!),
@@ -53,6 +65,10 @@ class _WorkoutCompleteViewState extends State<WorkoutCompleteView> {
     setState(() {});
   }
 
+  void _updatePrefs(StatTracker stats) async {
+    SharedPreferencesNotifier().incrementWorkoutCompletion(widget.workoutMetadata.id);
+  }
+
   @override
   void initState() {
     // lock orientation
@@ -69,8 +85,13 @@ class _WorkoutCompleteViewState extends State<WorkoutCompleteView> {
 
   @override
   Widget build(BuildContext context) {
-    stats = ModalRoute.of(context)!.settings.arguments as StatTracker;
-    _populateItems(stats);
+    // stats = ModalRoute.of(context)!.settings.arguments as StatTracker;
+    _populateItems(widget.statTracker);
+
+    if(!oneTimeUpdateFlag){
+      _updatePrefs(widget.statTracker);
+      oneTimeUpdateFlag = true;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -90,9 +111,9 @@ class _WorkoutCompleteViewState extends State<WorkoutCompleteView> {
                 fontSize: 15,
                 letterSpacing: 1,
               ),),
-              Text(stats.completionDate),
+              Text(widget.statTracker.completionDate),
               const SizedBox(height: 20,),
-              PercentageRing(percentage: (stats.completedReps / stats.goalReps)),
+              PercentageRing(percentage: (widget.statTracker.completedReps / widget.statTracker.goalReps)),
               const SizedBox(height: 20,),
               FractionallySizedBox(
                 widthFactor: 0.8,
@@ -110,7 +131,7 @@ class _WorkoutCompleteViewState extends State<WorkoutCompleteView> {
                       ],
                     ),
                     const SizedBox(height: 10,),
-                    Text('Completion Time : ${stats.completionTime}'),
+                    Text('Completion Time : ${widget.statTracker.completionTime}'),
                   ],
                 ),
               ),

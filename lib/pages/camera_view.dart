@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:calisthenics_app/common/workout_metadata.dart';
+import 'package:calisthenics_app/pages/workout_complete_view.dart';
 import 'package:calisthenics_app/utils/workout_stat_tracker.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -18,7 +20,8 @@ class CameraView extends StatefulWidget {
       this.initialCameraLensDirection = CameraLensDirection.back,
       required this.workoutComplete,
       required this.statTracker,
-      required this.setupComplete})
+      required this.setupComplete,
+      required this.workoutMetadata})
       : super(key: key);
 
   final CustomPaint? customPaint;
@@ -30,6 +33,7 @@ class CameraView extends StatefulWidget {
   final bool workoutComplete;
   final StatTracker statTracker;
   final double setupComplete;
+  final WorkoutMetadata workoutMetadata;
 
   @override
   State<CameraView> createState() => _CameraViewState();
@@ -89,10 +93,17 @@ class _CameraViewState extends State<CameraView> {
       widget.statTracker.setCompletionDate();
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacementNamed(context, '/workout-complete',
-            arguments: widget.statTracker
-            // add arguments - https://docs.flutter.dev/cookbook/navigation/navigate-with-arguments#:~:text=You%20can%20accomplish%20this%20task,the%20MaterialApp%20or%20CupertinoApp%20constructor.
-            );
+        // Navigator.pushReplacementNamed(context, '/workout-complete',
+        //     arguments: widget.statTracker
+        //     // add arguments - https://docs.flutter.dev/cookbook/navigation/navigate-with-arguments#:~:text=You%20can%20accomplish%20this%20task,the%20MaterialApp%20or%20CupertinoApp%20constructor.
+        //     );
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => WorkoutCompleteView(
+              workoutMetadata: widget.workoutMetadata,
+              statTracker: widget.statTracker,
+            )),
+        );
       });
     }
 

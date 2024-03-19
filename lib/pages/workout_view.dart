@@ -1,6 +1,7 @@
 import 'package:calisthenics_app/common/base_exercise.dart';
 import 'package:calisthenics_app/common/exercise_type.dart';
 import 'package:calisthenics_app/common/leg_check_return.dart';
+import 'package:calisthenics_app/common/workout_metadata.dart';
 import 'package:calisthenics_app/exercises/knee_pushup.dart';
 import 'package:calisthenics_app/pages/camera_view.dart';
 import 'package:calisthenics_app/painters/pose_painter.dart';
@@ -20,12 +21,12 @@ import '../exercises/pushup.dart';
 class WorkoutView extends StatefulWidget {
   const WorkoutView({
     super.key,
-    required this.exerciseType,
+    required this.workoutMetadata,
     this.onCameraFeedReady,
     this.onCameraLensDirectionChanged,
   });
 
-  final ExerciseType exerciseType;
+  final WorkoutMetadata workoutMetadata;
   final Function()? onCameraFeedReady;
   final Function(CameraLensDirection direction)? onCameraLensDirectionChanged;
 
@@ -47,7 +48,7 @@ class _WorkoutViewState extends State<WorkoutView> {
   late BaseExercise exercise;
 
   // TODO - move repGoal to some config
-  int repGoal = 10;
+  late int repGoal;
 
   bool workoutComplete = false;
 
@@ -86,15 +87,17 @@ class _WorkoutViewState extends State<WorkoutView> {
       DeviceOrientation.landscapeRight,
     ]);
 
+    repGoal = widget.workoutMetadata.repGoal;
+
     // load exercise
-    switch(widget.exerciseType) {
+    switch(widget.workoutMetadata.type) {
       case ExerciseType.PUSHUP:
         exercise = Pushup(repGoal);
       case ExerciseType.KNEE_PUSHUP:
         exercise = KneePushup(repGoal);
     }
 
-    statTracker = StatTracker(repGoal, widget.exerciseType);
+    statTracker = StatTracker(repGoal, widget.workoutMetadata.type);
 
     _overlay[1] = _repCounter(exercise.repCounter.reps.toString());
     super.initState();
@@ -124,6 +127,7 @@ class _WorkoutViewState extends State<WorkoutView> {
       onCameraLensDirectionChanged: (value) => _cameraLensDirection = value,
       statTracker: statTracker,
       setupComplete: setupComplete,
+      workoutMetadata: widget.workoutMetadata,
     );
   }
 
@@ -236,13 +240,15 @@ class _WorkoutViewState extends State<WorkoutView> {
 
     if (setupComplete >= 1 && !oneTimeSetupFlag) {
       oneTimeSetupFlag = true;
+      showingFormCorrection = true;
+      workoutStarted = true;
 
       // play ding sound and tell user they the workout has started
       AudioPlayer().play(AssetSource('audio/workout-begun.mp3'));
 
       // trigger timer
-      Future.delayed(const Duration(seconds: 2), () {
-        workoutStarted = true;
+      Future.delayed(const Duration(seconds: 3), () {
+        showingFormCorrection = false;
       });
     }
   }
@@ -306,12 +312,12 @@ class _WorkoutViewState extends State<WorkoutView> {
         case FormMistake.BOTTOM_ARMS:
           _overlay[0] = _textFeedback("Try and go lower next rep");
           savedPose = generateFormCorrection(
-              exercise.bottomPosition, formMistake, widget.exerciseType);
+              exercise.bottomPosition, formMistake, widget.workoutMetadata.type);
           AudioPlayer().play(AssetSource('audio/lowerArmsFormCorrection.mp3'));
         case FormMistake.TOP_ARMS:
           _overlay[0] = _textFeedback("Straighten arms at the top of each rep");
           savedPose = generateFormCorrection(
-              exercise.topPosition, formMistake, widget.exerciseType);
+              exercise.topPosition, formMistake, widget.workoutMetadata.type);
           AudioPlayer().play(AssetSource('audio/topArmsFormCorrection.mp3'));
         case FormMistake.HIGH_HIPS:
         // TODO clean up - not in use
@@ -321,18 +327,18 @@ class _WorkoutViewState extends State<WorkoutView> {
         case FormMistake.LOW_HIPS:
           _overlay[0] = _textFeedback("Straighten out your hips"); // old - Try bring your hips upwards
           savedPose = generateFormCorrection(
-              exercise.hipPosition, formMistake, widget.exerciseType);
+              exercise.hipPosition, formMistake, widget.workoutMetadata.type);
           // need new audio for hips
           AudioPlayer().play(AssetSource('audio/lowHipsFormCorrection.mp3'));
         case FormMistake.BENT_LEGS:
           _overlay[0] = _textFeedback("Straighten out your legs");
           savedPose = generateFormCorrection(
-              exercise.legPosition, formMistake, widget.exerciseType);
+              exercise.legPosition, formMistake, widget.workoutMetadata.type);
           AudioPlayer().play(AssetSource('audio/bentLegsFormCorrection.mp3'));
         case FormMistake.BEND_LEGS_LESS || FormMistake.BEND_LEGS_MORE:
           _overlay[0] = _textFeedback("Bend knees to 90 degrees");
           savedPose = generateFormCorrection(
-              exercise.legPosition, formMistake, widget.exerciseType);
+              exercise.legPosition, formMistake, widget.workoutMetadata.type);
           AudioPlayer().play(AssetSource('audio/kneePushupFormCorrection.mp3'));
         case FormMistake.NONE:
           // do nothing

@@ -1,14 +1,15 @@
+import 'package:calisthenics_app/common/workout_metadata.dart';
+import 'package:calisthenics_app/pages/workout_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-// TODO possibly block screen rotation for this page.
 
 class WorkoutSetupView extends StatefulWidget {
-  final String nextPageRoute;
+  final WorkoutMetadata workoutMetadata;
 
   const WorkoutSetupView({
     super.key,
-    required this.nextPageRoute
+    required this.workoutMetadata
   });
 
   @override
@@ -57,7 +58,13 @@ class _WorkoutSetupViewState extends State<WorkoutSetupView> {
               const SizedBox(height: 20), // Provides spacing between the bullet points and the button
               ElevatedButton(
                 onPressed: () {
-                  Navigator.pushReplacementNamed(context, widget.nextPageRoute);
+                  // Navigator.pushReplacementNamed(context, widget.workoutMetadata.route);
+                  Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => WorkoutView(
+                        workoutMetadata: widget.workoutMetadata,
+                      ))
+                  );
                 },
                 child: Text('Get into Position'),
               ),
