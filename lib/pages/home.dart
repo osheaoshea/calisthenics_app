@@ -57,7 +57,7 @@ class _HomeState extends State<Home> {
                   const SizedBox(height: 20,),
                   ElevatedButton.icon(
                     onPressed: () {
-                      Navigator.pushNamed(context, '/exercise-select');
+                      Navigator.pushNamed(context, '/tutorial');
                     },
                     icon: Icon(Icons.question_mark, color: Colors.grey[800],),
                     label: Text('Workout Tutorials', style: TextStyle(color: Colors.grey[800]),),
