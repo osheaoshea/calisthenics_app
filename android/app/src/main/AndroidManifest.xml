@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="calisthenics_app"
+        android:label="CaliCorrect"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
