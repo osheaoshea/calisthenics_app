@@ -18,7 +18,6 @@ class ExerciseSelectView extends StatefulWidget {
 
 class _ExerciseSelectViewState extends State<ExerciseSelectView> {
 
-  // int? test_value;
   UserData userData = UserData();
 
   @override
@@ -159,11 +158,11 @@ class _ExerciseSelectViewState extends State<ExerciseSelectView> {
               SizedBox(
                 width: 60,
                 child: LinearProgressIndicator(
-                  backgroundColor: Colors.grey[300], // Background color of the progress bar
+                  backgroundColor: Colors.grey[300],
                   valueColor: AlwaysStoppedAnimation<Color>(
                       _getColorFromDecimal(_completion/3)
-                  ), // Fill color
-                  value: _completion / 3, // Set the progress value between 0.0 and 1.0
+                  ),
+                  value: _completion / 3,
                 ),
               ),
             ],
@@ -213,11 +212,11 @@ class _ExerciseSelectViewState extends State<ExerciseSelectView> {
               SizedBox(
                 width: 60,
                 child: LinearProgressIndicator(
-                  backgroundColor: Colors.grey[300], // Background color of the progress bar
+                  backgroundColor: Colors.grey[300],
                   valueColor: AlwaysStoppedAnimation<Color>(
                       _getColorFromDecimal(_completion/3)
-                  ), // Fill color
-                  value: _completion / 3, // Set the progress value between 0.0 and 1.0
+                  ),
+                  value: _completion / 3,
                 ),
               ),
             ],
@@ -323,6 +322,9 @@ class _ExerciseSelectViewState extends State<ExerciseSelectView> {
     );
   }
 
+  /// Code adapted from: Alert Dialog and Confirmation Dialog in Flutter; Praharsh Bhatt; 2020;
+  /// Available from: https://medium.com/multiverse-software/alert-dialog-and-confirmation-dialog-in-flutter-8d8c160f4095
+  /// Accessed: 18/03/2024
   void _showConfirmationDialog(BuildContext context, WorkoutMetadata _metadata) {
     // Show dialog
     showDialog(
@@ -375,28 +377,6 @@ class _ExerciseSelectViewState extends State<ExerciseSelectView> {
 
     // Return the resulting color
     return Color.fromARGB(255, red, green, blue);
-  }
-
-  Widget _valueCircle(int value) {
-    return Container(
-      width: 40.0, // Circle size
-      height: 40.0, // Circle size
-      decoration: BoxDecoration(
-        color: value > 0 ? Colors.green : Colors.red,
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: value > 0
-            ? Text(
-          '$value',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-          ),
-        )
-            : Container(), // If value is not above 0, we don't display anything.
-      ),
-    );
   }
 }
 

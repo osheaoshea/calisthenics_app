@@ -30,6 +30,9 @@ class ConfirmationButton extends StatelessWidget {
     );
   }
 
+  /// Code adapted from: Alert Dialog and Confirmation Dialog in Flutter; Praharsh Bhatt; 2020;
+  /// Available from: https://medium.com/multiverse-software/alert-dialog-and-confirmation-dialog-in-flutter-8d8c160f4095
+  /// Accessed: 18/03/2024
   void _showConfirmationDialog(BuildContext context) {
     // Show dialog
     showDialog(

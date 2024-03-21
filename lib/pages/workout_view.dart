@@ -17,6 +17,9 @@ import 'package:audioplayers/audioplayers.dart';
 import '../common/arm_check_return.dart';
 import '../exercises/pushup.dart';
 
+/// Code adapted from: google_ml_kit package example; flutter-ml.dev; 2023;
+/// Available from: https://github.com/flutter-ml/google_ml_kit_flutter/tree/master/packages/example
+/// Accessed 31/01/2024
 
 class WorkoutView extends StatefulWidget {
   const WorkoutView({

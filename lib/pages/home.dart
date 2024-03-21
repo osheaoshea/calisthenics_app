@@ -17,7 +17,6 @@ class _HomeState extends State<Home> {
         title: Text('CaliCorrect',
           style: TextStyle(
             fontSize: 30,
-            // fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,

@@ -43,15 +43,18 @@ class TutorialView extends StatelessWidget {
         )));
   }
 
+  /// Code adapted from: How can I add shadow to the widget in flutter?; Stack Overflow; 2018;
+  /// https://stackoverflow.com/questions/52227846/how-can-i-add-shadow-to-the-widget-in-flutter
+  /// Accessed: 17/03/2024
   Widget _buildImage(String url, String imgPath) {
     return Container(
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.5), // Shadow color
-            spreadRadius: 5, // Spread radius
-            blurRadius: 7, // Blur radius
-            offset: Offset(0, 3), // changes position of shadow
+            color: Colors.grey.withOpacity(0.5),
+            spreadRadius: 5,
+            blurRadius: 7,
+            offset: Offset(0, 3),
           ),
         ],
       ),
