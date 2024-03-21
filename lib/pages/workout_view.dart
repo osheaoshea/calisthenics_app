@@ -328,8 +328,7 @@ class _WorkoutViewState extends State<WorkoutView> {
           _overlay[0] = _textFeedback("Straighten out your hips"); // old - Try bring your hips upwards
           savedPose = generateFormCorrection(
               exercise.hipPosition, formMistake, widget.workoutMetadata.type);
-          // need new audio for hips
-          AudioPlayer().play(AssetSource('audio/lowHipsFormCorrection.mp3'));
+          AudioPlayer().play(AssetSource('audio/strightHipsFormCorrection.mp3'));
         case FormMistake.BENT_LEGS:
           _overlay[0] = _textFeedback("Straighten out your legs");
           savedPose = generateFormCorrection(

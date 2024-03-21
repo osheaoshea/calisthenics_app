@@ -8,7 +8,7 @@ abstract class BaseAngles {
   final double hipAngleMax = 190;
   final double hipAngleMin = 150;
   final double legAngleMax = 180;
-  final double legAngleMin = 155;//179;//
+  final double legAngleMin = 150;//179;//
 
   // todo - implement shared angle code
   bool checkStartArmAngles(double right, double left) {
