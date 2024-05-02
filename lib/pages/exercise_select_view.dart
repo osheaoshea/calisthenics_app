@@ -18,7 +18,6 @@ class ExerciseSelectView extends StatefulWidget {
 
 class _ExerciseSelectViewState extends State<ExerciseSelectView> {
 
-  // int? test_value;
   UserData userData = UserData();
 
   @override
@@ -119,10 +118,7 @@ class _ExerciseSelectViewState extends State<ExerciseSelectView> {
                           'Pushup',
                           _getCompletion(ExerciseType.PUSHUP)
                       ),
-                      _exerciseExpand(
-                          'One-Arm Pushup',
-                          0
-                      ),
+                      _comingSoon('One-Arm Pushup', 0)
                     ],
                   ),
                 ),
@@ -141,6 +137,47 @@ class _ExerciseSelectViewState extends State<ExerciseSelectView> {
                 backgroundColor: Colors.grey[100],
               ),
             )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _comingSoon(String _text, int _completion) {
+    return Card(
+      child: Theme(
+        data: ThemeData().copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(_text, style: TextStyle(
+                fontSize: 14,
+                letterSpacing: 0.65,
+              ),),
+              SizedBox(
+                width: 60,
+                child: LinearProgressIndicator(
+                  backgroundColor: Colors.grey[300],
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                      _getColorFromDecimal(_completion/3)
+                  ),
+                  value: _completion / 3,
+                ),
+              ),
+            ],
+          ),
+          trailing: Transform.scale(
+            scale: 0.75,
+            child: Icon(Icons.expand_more),
+          ),
+          children: <Widget>[
+            SizedBox(height: 10,),
+            Text('Coming soon!', style: TextStyle(
+              fontSize: 14,
+              letterSpacing: 0.65,
+            ),),
+            SizedBox(height: 10,),
           ],
         ),
       ),
@@ -175,11 +212,11 @@ class _ExerciseSelectViewState extends State<ExerciseSelectView> {
               SizedBox(
                 width: 60,
                 child: LinearProgressIndicator(
-                  backgroundColor: Colors.grey[300], // Background color of the progress bar
+                  backgroundColor: Colors.grey[300],
                   valueColor: AlwaysStoppedAnimation<Color>(
                       _getColorFromDecimal(_completion/3)
-                  ), // Fill color
-                  value: _completion / 3, // Set the progress value between 0.0 and 1.0
+                  ),
+                  value: _completion / 3,
                 ),
               ),
             ],
@@ -285,6 +322,9 @@ class _ExerciseSelectViewState extends State<ExerciseSelectView> {
     );
   }
 
+  /// Code adapted from: Alert Dialog and Confirmation Dialog in Flutter; Praharsh Bhatt; 2020;
+  /// Available from: https://medium.com/multiverse-software/alert-dialog-and-confirmation-dialog-in-flutter-8d8c160f4095
+  /// Accessed: 18/03/2024
   void _showConfirmationDialog(BuildContext context, WorkoutMetadata _metadata) {
     // Show dialog
     showDialog(
@@ -322,61 +362,6 @@ class _ExerciseSelectViewState extends State<ExerciseSelectView> {
     );
   }
 
-  Widget _exerciseButtonOLD(String _text, WorkoutMetadata _metadata, int _reps) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 10, 0, 10),
-      child: SizedBox(
-        height: 70,
-        child: ElevatedButton(
-          onPressed: () {
-            if(_metadata.id != ''){
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => WorkoutSetupView(
-                  workoutMetadata: _metadata
-                ))
-              );
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12), // <-- Radius
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(_text, style: TextStyle(
-                  color: Colors.grey[800],
-                  fontSize: 15
-              ),),
-              SizedBox(
-                width: 70,
-                height: 40,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    LinearProgressIndicator(
-                      backgroundColor: Colors.grey[300], // Background color of the progress bar
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        _getColorFromDecimal(_reps/10)
-                      ), // Fill color
-                      value: _reps / 10, // Set the progress value between 0.0 and 1.0
-                    ),
-                    Text("$_reps/10", style: TextStyle(
-                      color: Colors.grey[800],
-                      fontSize: 12
-                    ),)
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Color _getColorFromDecimal(double decimal) {
     // Ensure the decimal is within the valid range [0, 1]
     decimal = decimal.clamp(0.0, 1.0);
@@ -392,28 +377,6 @@ class _ExerciseSelectViewState extends State<ExerciseSelectView> {
 
     // Return the resulting color
     return Color.fromARGB(255, red, green, blue);
-  }
-
-  Widget _valueCircle(int value) {
-    return Container(
-      width: 40.0, // Circle size
-      height: 40.0, // Circle size
-      decoration: BoxDecoration(
-        color: value > 0 ? Colors.green : Colors.red,
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: value > 0
-            ? Text(
-          '$value',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-          ),
-        )
-            : Container(), // If value is not above 0, we don't display anything.
-      ),
-    );
   }
 }
 

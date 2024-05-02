@@ -4,6 +4,10 @@ import 'dart:ui';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 
+/// Code from: google_ml_kit package example; flutter-ml.dev; 2023;
+/// Available from: https://github.com/flutter-ml/google_ml_kit_flutter/tree/master/packages/example
+/// Accessed 31/01/2024
+
 double translateX(
     double x,
     Size canvasSize,

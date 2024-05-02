@@ -44,5 +44,4 @@ class KneePushupAngles extends BaseAngles {
     }
   }
 
-// TODO - possibly check occlusion/likelihood (if < threshold, don't track that arm)
 }

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 
+/// Code adapted from: ChatGPT 3.5; OpenAI; 2024;
+/// Available from: https://chat.openai.com/share/c88d05b4-ef77-4e7d-9040-95cf79951859
+
 class PercentageRing extends StatelessWidget {
   final double percentage;
 

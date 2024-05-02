@@ -54,7 +54,7 @@ class BaseExercise {
     // checking if hips are too high or too low
     if (!angles.checkHipAngles(rightHipAngle, leftHipAngle)) {
       hipErrorCounter ++;
-      // TODO - fix high hips error
+      // TODO - future work - fix high hips error
       if (hipErrorCounter > hipErrorLimit) {
         hipErrorCounter = 0;
         hipPosition = pose;

@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Code adapted from: ChatGPT 4; OpenAI; 2024;
+/// Available from: https://chat.openai.com/share/aca1da17-80dc-471f-bf8e-7edf00330b26
+
 class SharedPreferencesNotifier {
   static final SharedPreferencesNotifier _instance = SharedPreferencesNotifier._internal();
   factory SharedPreferencesNotifier() => _instance;

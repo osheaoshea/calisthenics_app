@@ -154,10 +154,10 @@ class _WorkoutCompleteViewState extends State<WorkoutCompleteView> {
               perfectWorkout
                   ? Container(
                       height: 80,
-                      padding: EdgeInsets.fromLTRB(20, 0, 20, 0), // Adjust padding as needed
+                      padding: EdgeInsets.fromLTRB(20, 0, 20, 0),
                       decoration: BoxDecoration(
-                        color: Colors.lightGreen[100], // Light green background color
-                        borderRadius: BorderRadius.circular(10), // Rounded corners
+                        color: Colors.lightGreen[100],
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Column(
                         mainAxisAlignment: MainAxisAlignment.center,

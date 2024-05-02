@@ -30,7 +30,7 @@ class _WorkoutSetupViewState extends State<WorkoutSetupView> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              Image.asset('assets/images/app-2m-clear.png'), // Replace with your image path
+              Image.asset('assets/images/app-2m-clear.png'),
               SizedBox(height: 20),
               for (var point in [
                 'Place your phone on the floor, leaning against a suitable vertical surface.',
@@ -39,23 +39,23 @@ class _WorkoutSetupViewState extends State<WorkoutSetupView> {
                 'The app will inform you when the workout has begun.'
               ])
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(45, 0, 45, 8.0), // Space between bullet points
+                  padding: const EdgeInsets.fromLTRB(45, 0, 45, 8.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start, // Align bullet at the top
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text('• ', textAlign: TextAlign.center), // Bullet point
-                      Expanded( // Allows the text to wrap and fill the row
+                      Text('• ', textAlign: TextAlign.center),
+                      Expanded(
                         child: Text(
                           point,
-                          textAlign: TextAlign.center, // Centers the text when it wraps
+                          textAlign: TextAlign.center,
                           softWrap: true,
                         ),
                       ),
                     ],
                   ),
-                ),// Provides spacing between the image and the bullet points
-              const SizedBox(height: 20), // Provides spacing between the bullet points and the button
+                ),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
                   // Navigator.pushReplacementNamed(context, widget.workoutMetadata.route);
@@ -66,7 +66,12 @@ class _WorkoutSetupViewState extends State<WorkoutSetupView> {
                       ))
                   );
                 },
-                child: Text('Get into Position'),
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12), // <-- Radius
+                  ),
+                ),
+                child: Text('Get into Position', style: TextStyle(color: Colors.grey[800]),),
               ),
             ],
           ),
